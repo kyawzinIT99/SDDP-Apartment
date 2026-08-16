@@ -5,11 +5,28 @@ import { botGreeting, botReply, type BotLanguage } from "./chat-bot";
 
 type Msg = { from: "bot" | "user"; text: string };
 
+// Stable session ID per page load
+function makeSessionId() {
+  return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function saveChatSession(sessionId: string, lang: BotLanguage, msgs: Msg[]) {
+  if (msgs.filter((m) => m.from === "user").length === 0) return; // nothing to save if no user messages
+  const userQuestions = msgs.filter((m) => m.from === "user").length;
+  fetch("/api/chat-logs", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: sessionId, lang, messages: msgs, question_count: userQuestions }),
+  }).catch(() => undefined);
+}
+
 export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; lineId: string; lineHref: string }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const sessionId = useRef(makeSessionId());
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -19,37 +36,50 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
   }, [lang]);
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 80);
   }, [open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, typing]);
 
+  // Auto-save 4 seconds after the last message
+  function scheduleSave(currentMsgs: Msg[], currentLang: BotLanguage) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => saveChatSession(sessionId.current, currentLang, currentMsgs), 4000);
+  }
+
+  // Also save when widget is closed
+  function handleClose() {
+    setOpen(false);
+    saveChatSession(sessionId.current, lang, msgs);
+  }
+
   function send() {
     const text = input.trim();
     if (!text) return;
     setInput("");
-    setMsgs((prev) => [...prev, { from: "user", text }]);
+    const nextMsgs: Msg[] = [...msgs, { from: "user", text }];
+    setMsgs(nextMsgs);
     setTyping(true);
     setTimeout(() => {
       const reply = botReply(text, lang, lineId);
-      setMsgs((prev) => [...prev, { from: "bot", text: reply }]);
+      const finalMsgs: Msg[] = [...nextMsgs, { from: "bot", text: reply }];
+      setMsgs(finalMsgs);
       setTyping(false);
+      scheduleSave(finalMsgs, lang);
     }, 600);
   }
 
   return (
     <>
       <button
-        className="chat-widget-btn"
+        className={`chat-widget-btn${open ? " is-open" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-label="Chat with SDDP"
         aria-expanded={open}
       >
-        {open ? "✕" : "💬"}
+        {open ? "✕" : <img src="/brand-logo.jpg" alt="SDDP chat" />}
       </button>
 
       {open && (
@@ -60,18 +90,22 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
               <b>SDDP Assistant</b>
               <small>Ask anything about the apartment</small>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
+            <button onClick={handleClose} aria-label="Close chat">✕</button>
           </div>
 
           <div className="chat-widget-messages">
             {msgs.map((m, i) => (
               <div key={i} className={`chat-msg chat-msg--${m.from}`}>
-                {m.text.split("\n").map((line, j) => (
-                  <span key={j}>{line}{j < m.text.split("\n").length - 1 && <br />}</span>
+                {m.text.split("\n").map((line, j, arr) => (
+                  <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
                 ))}
               </div>
             ))}
-            {typing && <div className="chat-msg chat-msg--bot chat-msg--typing"><span /><span /><span /></div>}
+            {typing && (
+              <div className="chat-msg chat-msg--bot chat-msg--typing">
+                <span /><span /><span />
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
@@ -86,10 +120,6 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
             <button onClick={send} disabled={!input.trim()} aria-label="Send">↑</button>
           </div>
 
-          <a className="chat-widget-line" href={lineHref} target="_blank" rel="noreferrer">
-            <img src="/brand-logo.jpg" alt="" />
-            <span>{lang === "th" ? "คุยกับทีมงานจริงบน Line" : lang === "my" ? "Line တွင် တကယ့်ဝန်ထမ်းနှင့် စကားပြောရန်" : "Talk to a real person on Line"}<b> @{lineId}</b></span>
-          </a>
         </div>
       )}
     </>

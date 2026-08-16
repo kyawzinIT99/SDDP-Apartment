@@ -5,10 +5,11 @@ import { defaultSiteSettings, publicGallery, type Locale, type SiteSettings } fr
 import { TypedDateField } from "../lib/typed-date";
 import InvoiceDesk from "./InvoiceDesk";
 
+type ChatLog = { id: string; lang: string; messages: { from: "bot" | "user"; text: string }[]; question_count: number; created_at: number; last_seen_at: number };
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
-type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "automation";
+type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "chatlogs" | "automation";
 type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
 
 const emptyResident: ResidentDraft = { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: "", checkOutDate: "", consentConfirmed: false };
@@ -36,6 +37,8 @@ export default function AdminDashboard({ displayName }: { displayName: string })
   const [residentFilter, setResidentFilter] = useState<"active" | "checked_out" | "all">("active");
   const [converting, setConverting] = useState<string>("");
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
+  const [chatLogs, setChatLogs] = useState<ChatLog[]>([]);
+  const [chatLogOpen, setChatLogOpen] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -131,8 +134,14 @@ export default function AdminDashboard({ displayName }: { displayName: string })
     inquiries: "Guest pipeline",
     residents: "Resident records",
     invoices: "Printable invoice",
+    chatlogs: "Visitor chat logs",
     automation: "Hosting on Render",
   };
+
+  function openChatLogsTab() {
+    setTab("chatlogs");
+    fetch("/api/chat-logs").then((r) => r.ok ? r.json() : []).then((rows) => setChatLogs(Array.isArray(rows) ? rows : [])).catch(() => undefined);
+  }
 
   return <main className="admin-shell">
     <aside className="admin-nav">
@@ -144,8 +153,9 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         ["inquiries", `Inquiries (${newInquiries})`],
         ["residents", `Residents (${activeResidents})`],
         ["invoices", "Invoices"],
+        ["chatlogs", `Chat logs (${chatLogs.length})`],
         ["automation", "Hosting"],
-      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : "⌁"}</i>{label}</button>)}</div>
+      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => id === "chatlogs" ? openChatLogsTab() : setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "chatlogs" ? "💬" : "⌁"}</i>{label}</button>)}</div>
       <div className="admin-user"><span>{displayName.slice(0, 1).toUpperCase()}</span><div><b>{displayName}</b><small>Property editor</small></div><button type="button" className="admin-logout" onClick={logout}>Sign out</button></div>
     </aside>
     <section className="admin-main">
@@ -221,6 +231,28 @@ export default function AdminDashboard({ displayName }: { displayName: string })
       </div>}
 
       {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} seed={invoiceSeed} onStatus={setStatus} />}
+
+      {tab === "chatlogs" && <section className="editor-card chat-log-section">
+        <div className="card-head"><div><span>VISITOR CHAT LOGS</span><h2>Questions asked via the website bot</h2><p>Every session where a visitor typed a question is recorded here. Sessions with no messages are not saved.</p></div><button type="button" className="text-link" onClick={openChatLogsTab}>Refresh ↺</button></div>
+        {chatLogs.length === 0
+          ? <div className="empty-state"><b>No chat sessions yet</b><p>Sessions will appear here after visitors use the chat widget on the public website.</p></div>
+          : chatLogs.map((log) => {
+            const isOpen = chatLogOpen === log.id;
+            const preview = log.messages.find((m) => m.from === "user")?.text ?? "—";
+            const langLabel = log.lang === "th" ? "ไทย" : log.lang === "my" ? "မြန်မာ" : "EN";
+            return <article key={log.id} className="chat-log-card">
+              <div className="chat-log-meta" onClick={() => setChatLogOpen(isOpen ? null : log.id)} style={{ cursor: "pointer" }}>
+                <span className="chat-log-lang">{langLabel}</span>
+                <div><b>{preview.length > 60 ? preview.slice(0, 60) + "…" : preview}</b><small>{log.question_count} question{log.question_count !== 1 ? "s" : ""} · {new Date(log.created_at).toLocaleString()} · last active {new Date(log.last_seen_at).toLocaleString()}</small></div>
+                <i style={{ marginLeft: "auto", opacity: .5 }}>{isOpen ? "▲" : "▼"}</i>
+              </div>
+              {isOpen && <div className="chat-log-thread">
+                {log.messages.map((m, i) => <div key={i} className={`chat-log-msg chat-log-msg--${m.from}`}>{m.text}</div>)}
+              </div>}
+            </article>;
+          })
+        }
+      </section>}
 
       {tab === "automation" && <div className="automation-grid">
         <section className="editor-card automation-status">
