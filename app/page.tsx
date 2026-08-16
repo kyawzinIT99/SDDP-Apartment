@@ -158,7 +158,8 @@ export default function Home() {
       return;
     }
     setFormStatus("sending"); setFormNotice("");
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
     try {
       const response = await fetch("/api/inquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...data, roomNumber: selectedRoom, locale: language }) });
       const result = await response.json();
@@ -170,7 +171,7 @@ export default function Home() {
         setFormNotice(notice); setFormStatus("idle"); return;
       }
       if (!response.ok) throw new Error();
-      setFormStatus("sent"); setSelectedRoom(""); event.currentTarget.reset();
+      setFormStatus("sent"); setSelectedRoom(""); form.reset();
     }
     catch { setFormStatus("error"); }
   }
