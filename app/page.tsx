@@ -106,6 +106,7 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>("en");
   const [settings, setSettings] = useState<SiteSettings>(defaultSiteSettings);
   const [showGallery, setShowGallery] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [availability, setAvailability] = useState<{ rooms: RoomAvailability[]; stale?: boolean; source?: string }>({ rooms: catalogBoard(), stale: true, source: "catalog" });
   const [selectedRoom, setSelectedRoom] = useState("");
   const [formStatus, setFormStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -178,19 +179,24 @@ export default function Home() {
 
   return (
     <main lang={language} style={theme}>
-      <header className="nav">
+      <header className={`nav${menuOpen ? " menu-open" : ""}`}>
         <a href="#top" className="brand" aria-label="SDDP Apartment home">
           <img src="/brand-logo.jpg" alt="SDDP Apartment" />
           <span><b>SDDP</b><small>APARTMENT</small></span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#top">{nav[0]}</a><a href="#amenities">{nav[1]}</a><a href="#availability">{nav[2]}</a><a href="#gallery">{nav[3]}</a><a href="#inquiry">{nav[4]}</a><a href="#location">{nav[5]}</a>
+          {([["#top", nav[0]], ["#amenities", nav[1]], ["#availability", nav[2]], ["#gallery", nav[3]], ["#inquiry", nav[4]], ["#location", nav[5]]] as [string, string][]).map(([href, label]) => (
+            <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
+          ))}
         </nav>
         <div className="nav-side">
           <div className="languages" aria-label="Language">
             {(["en", "th", "my"] as Language[]).map((code) => <button key={code} className={language === code ? "active" : ""} onClick={() => setLanguage(code)}>{code === "en" ? "EN" : code === "th" ? "ไทย" : "မြန်မာ"}</button>)}
           </div>
           <a className="small-cta" href="#inquiry">{t.check}</a>
+          <button className="nav-hamburger" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen((o) => !o)}>
+            {menuOpen ? "✕" : "☰"}
+          </button>
         </div>
       </header>
 
