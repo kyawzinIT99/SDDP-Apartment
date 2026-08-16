@@ -50,4 +50,11 @@ This project does not use other websites or their git remotes.
 
 ## Optional alerts
 
-Set `N8N_INQUIRY_WEBHOOK` and `N8N_WEBHOOK_SECRET` only if you want a separate staff alert. Inquiry and resident records still save in this app first. Passport numbers are never included in those alerts.
+SDDP can reuse the existing Hostinger n8n instance. Install a **new** workflow named **SDDP Inquiry Alert**. Do not edit BCC or PDF workflows.
+
+1. In n8n, import `n8n/sddp-inquiry-alert.json`.
+2. Set n8n env `SDDP_N8N_WEBHOOK_SECRET` and `SDDP_ALERT_EMAIL`. Attach an **SDDP Gmail** credential (not the BCC or PDF workflow).
+3. Activate **SDDP Inquiry Alert**. The webhook path is `/webhook/sddp-inquiry-alert`.
+4. On Render, set `N8N_INQUIRY_WEBHOOK` to that URL and `N8N_WEBHOOK_SECRET` to the same secret.
+
+Inquiry and resident records still save in this app first. Passport numbers are never included in those alerts.

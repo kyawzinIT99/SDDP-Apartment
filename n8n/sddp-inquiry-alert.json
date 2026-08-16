@@ -1,0 +1,63 @@
+{
+  "name": "SDDP Inquiry Alert",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sddp-inquiry-alert",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "sddp-inquiry-webhook",
+      "name": "SDDP Inquiry Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "sddp-inquiry-alert"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = items[0].json;\nconst body = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nconst headers = raw.headers || {};\nconst headerSecret = headers['x-sddp-webhook-secret'] || headers['X-Sddp-Webhook-Secret'] || '';\nconst expected = $env.SDDP_N8N_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '';\nif (!expected || headerSecret !== expected) {\n  throw new Error('SDDP webhook secret was not accepted');\n}\nreturn [{\n  json: {\n    event: body.event || 'sddp.inquiry.created',\n    id: body.id || '',\n    name: body.name || '',\n    phone: body.phone || '',\n    channel: body.channel || '',\n    stayType: body.stayType || '',\n    roomNumber: body.roomNumber || '',\n    arrivalDate: body.arrivalDate || '',\n    message: body.message || '',\n    locale: body.locale || '',\n    site: 'https://sddp-apartment.onrender.com'\n  }\n}];"
+      },
+      "id": "sddp-inquiry-secret",
+      "name": "Check SDDP secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$env.SDDP_ALERT_EMAIL}}",
+        "subject": "=SDDP inquiry · {{$json.name}} · Room {{$json.roomNumber}}",
+        "emailType": "text",
+        "message": "=New SDDP Apartment website inquiry\n\nName: {{$json.name}}\nPhone / Line: {{$json.phone}}\nRoom: {{$json.roomNumber}}\nStay: {{$json.stayType}}\nArrival: {{$json.arrivalDate}}\nLocale: {{$json.locale}}\nChannel: {{$json.channel}}\n\n{{$json.message}}\n\nOpen admin: {{$json.site}}/admin\n"
+      },
+      "id": "sddp-inquiry-gmail",
+      "name": "Email SDDP staff",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [480, 0],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SDDP_GMAIL",
+          "name": "SDDP Gmail"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "SDDP Inquiry Webhook": {
+      "main": [[{ "node": "Check SDDP secret", "type": "main", "index": 0 }]]
+    },
+    "Check SDDP secret": {
+      "main": [[{ "node": "Email SDDP staff", "type": "main", "index": 0 }]]
+    }
+  }
+}

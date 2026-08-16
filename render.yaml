@@ -23,3 +23,7 @@ services:
         generateValue: true
       - key: GUEST_DATA_ENCRYPTION_KEY
         sync: false
+      - key: N8N_INQUIRY_WEBHOOK
+        sync: false
+      - key: N8N_WEBHOOK_SECRET
+        sync: false

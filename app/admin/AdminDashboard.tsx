@@ -233,13 +233,13 @@ export default function AdminDashboard({ displayName }: { displayName: string })
             <div><dt>Current storage</dt><dd>{hosting === "cloudflare-d1" ? "Cloudflare D1" : "SQLite on Render disk"}</dd></div>
             <div><dt>Public URL / mail</dt><dd>onrender.com · Line and phone only</dd></div>
             <div><dt>Next host</dt><dd>Stay on Render</dd></div>
-            <div><dt>Optional alerts</dt><dd>{n8nReady ? "Webhook connected" : "Not connected yet"}</dd></div>
+            <div><dt>Optional alerts</dt><dd>{n8nReady ? "SDDP Inquiry Alert connected" : "SDDP n8n not connected yet"}</dd></div>
           </dl>
         </section>
         <section className="editor-card flow-card">
           <span>PROGRESSIVE CRM</span>
           <div className="flow"><b>Website form</b><i>→</i><b>Inquiry pipeline</b><i>→</i><b>Resident record</b><i>→</i><b>Live room status</b></div>
-          <p>Start with inquiries and occupancy. Print the original SDDP invoice from the Invoices tab. The Render disk keeps those records across deploys. Passport data stays encrypted and is never sent in notifications.</p>
+          <p>Start with inquiries and occupancy. Print the original SDDP invoice from the Invoices tab. The Render disk keeps those records across deploys. Staff alerts use a new n8n workflow named SDDP Inquiry Alert on the existing Hostinger instance. BCC and PDF workflows are not used. Passport data stays encrypted and is never sent in notifications.</p>
         </section>
       </div>}
     </section>

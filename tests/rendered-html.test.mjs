@@ -22,7 +22,7 @@ test("server-renders the SDDP public site", async () => {
 });
 
 test("keeps the public facts and automation endpoints in source", async () => {
-  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy, crypto, typedDate, invoiceApi, invoiceSheet] = await Promise.all([
+  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy, crypto, typedDate, invoiceApi, invoiceSheet, n8nInquiry] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/site-defaults.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/inquiries/route.ts", import.meta.url), "utf8"),
@@ -35,6 +35,7 @@ test("keeps the public facts and automation endpoints in source", async () => {
     readFile(new URL("../app/lib/typed-date.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/invoices/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/InvoiceSheet.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../n8n/sddp-inquiry-alert.json", import.meta.url), "utf8"),
   ]);
   assert.match(defaults, /4,000/);
   assert.match(defaults, /094-293-5296/);
@@ -72,6 +73,7 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.doesNotMatch(storage, /cloudflare:workers/);
   assert.match(storage, /nodeSqliteAvailable|nodeBindings/);
   assert.match(storage, /\/var\/data\/sddp\.sqlite/);
+  assert.match(storage, /startsWith\("\/var\/data\/"\)/);
   assert.match(inquiryApi, /room_required/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS residents/);
   assert.match(admin, /Website content/);
@@ -86,4 +88,8 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(invoiceSheet, /invoiceCopy/);
   assert.match(invoiceSheet, /language/);
   assert.doesNotMatch(admin, /Existing VPS/);
+  assert.match(n8nInquiry, /"name": "SDDP Inquiry Alert"/);
+  assert.match(n8nInquiry, /sddp-inquiry-alert/);
+  assert.match(n8nInquiry, /x-sddp-webhook-secret/);
+  assert.doesNotMatch(n8nInquiry, /pdf-inquiry-alert|bcc-inquiry-alert|BCC Inquiry Alert|PDF Inquiry Alert/);
 });
