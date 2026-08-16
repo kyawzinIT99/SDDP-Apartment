@@ -10,6 +10,6 @@ export async function GET() {
     n8nConfigured: Boolean(runtime.N8N_INQUIRY_WEBHOOK && runtime.N8N_WEBHOOK_SECRET),
     passwordAuth: adminPasswordConfigured(),
     hosting: process.env.SDDP_DB_PATH || process.env.RENDER ? "render-sqlite" : "cloudflare-d1",
-    vpsLater: true,
+    vpsLater: false,
   });
 }

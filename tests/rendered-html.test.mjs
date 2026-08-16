@@ -71,12 +71,13 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(roomsApi, /source: "database"/);
   assert.doesNotMatch(storage, /cloudflare:workers/);
   assert.match(storage, /nodeSqliteAvailable|nodeBindings/);
+  assert.match(storage, /\/var\/data\/sddp\.sqlite/);
   assert.match(inquiryApi, /room_required/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS residents/);
   assert.match(admin, /Website content/);
   assert.match(admin, /Resident records/);
   assert.match(admin, /Guest pipeline/);
-  assert.match(admin, /Render free now, VPS later/);
+  assert.match(admin, /Render Starter is the host/);
   assert.match(admin, /Move in/);
   assert.match(admin, /Printable invoice|InvoiceDesk/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS invoices/);

@@ -15,12 +15,15 @@ type ResidentStatusInput = { id?: string; status?: string };
 
 const clean = (value: string | undefined, length: number) => value?.trim().slice(0, length) ?? "";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getChatGPTUser();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
     const { DB } = bindings(); await ensureSchema(DB!);
-    const rows = await DB!.prepare("SELECT id, full_name AS fullName, phone, email, nationality, resident_type AS residentType, passport_last4 AS passportLast4, room_number AS roomNumber, check_in_date AS checkInDate, check_out_date AS checkOutDate, status, consent_recorded_at AS consentRecordedAt, created_at AS createdAt FROM residents ORDER BY created_at DESC LIMIT 200").all();
+    const name = new URL(request.url).searchParams.get("name")?.trim() ?? "";
+    const rows = name
+      ? await DB!.prepare("SELECT id, full_name AS fullName, phone, email, nationality, resident_type AS residentType, passport_last4 AS passportLast4, room_number AS roomNumber, check_in_date AS checkInDate, check_out_date AS checkOutDate, status, consent_recorded_at AS consentRecordedAt, created_at AS createdAt FROM residents WHERE LOWER(full_name) LIKE ? OR room_number LIKE ? ORDER BY created_at DESC LIMIT 200").bind(`%${name.toLowerCase()}%`, `%${name}%`).all()
+      : await DB!.prepare("SELECT id, full_name AS fullName, phone, email, nationality, resident_type AS residentType, passport_last4 AS passportLast4, room_number AS roomNumber, check_in_date AS checkInDate, check_out_date AS checkOutDate, status, consent_recorded_at AS consentRecordedAt, created_at AS createdAt FROM residents ORDER BY created_at DESC LIMIT 200").all();
     return Response.json(rows.results ?? []);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Resident list failed";

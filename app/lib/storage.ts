@@ -37,7 +37,7 @@ function nodeSqliteAvailable() {
 }
 
 export function bindings() {
-  const dbPath = nodeEnv("SDDP_DB_PATH") || (nodeEnv("RENDER") ? "./data/sddp.sqlite" : undefined) || (nodeSqliteAvailable() ? "./data/sddp.sqlite" : undefined);
+  const dbPath = nodeEnv("SDDP_DB_PATH") || (nodeEnv("RENDER") ? "/var/data/sddp.sqlite" : undefined) || (nodeSqliteAvailable() ? "./data/sddp.sqlite" : undefined);
   if (dbPath) return nodeBindings(dbPath);
   const runtime = (globalThis as GlobalRuntime).__SDDP_RUNTIME;
   if (!runtime?.DB) throw new Error("Database binding is unavailable");
@@ -63,6 +63,7 @@ export async function ensureSchema(db: D1Database) {
     db.prepare("CREATE TABLE IF NOT EXISTS invoices (id TEXT PRIMARY KEY, book_number TEXT NOT NULL, invoice_number TEXT NOT NULL, room_number TEXT NOT NULL DEFAULT '', resident_name TEXT NOT NULL, address TEXT NOT NULL DEFAULT '', billing_month INTEGER NOT NULL, billing_year TEXT NOT NULL, issue_date TEXT NOT NULL, rent_amount REAL NOT NULL DEFAULT 0, electric_rate REAL NOT NULL DEFAULT 7, electric_prev REAL NOT NULL DEFAULT 0, electric_curr REAL NOT NULL DEFAULT 0, electric_units REAL NOT NULL DEFAULT 0, electric_amount REAL NOT NULL DEFAULT 0, water_rate REAL NOT NULL DEFAULT 17, water_prev REAL NOT NULL DEFAULT 0, water_curr REAL NOT NULL DEFAULT 0, water_units REAL NOT NULL DEFAULT 0, water_amount REAL NOT NULL DEFAULT 0, other_label TEXT NOT NULL DEFAULT '', other_amount REAL NOT NULL DEFAULT 0, total REAL NOT NULL DEFAULT 0, total_words TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, created_by TEXT NOT NULL)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_room ON invoices(room_number, created_at)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_name ON invoices(resident_name)"),
   ]);
   await addColumnIfMissing(db, "inquiries", "room_number", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(db, "inquiries", "notes", "TEXT NOT NULL DEFAULT ''");

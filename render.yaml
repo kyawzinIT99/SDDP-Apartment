@@ -2,7 +2,11 @@ services:
   - type: web
     name: sddp-apartment
     runtime: node
-    plan: free
+    plan: starter
+    disk:
+      name: sddp-data
+      mountPath: /var/data
+      sizeGB: 1
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /
@@ -12,7 +16,7 @@ services:
       - key: NODE_OPTIONS
         value: --experimental-sqlite
       - key: SDDP_DB_PATH
-        value: ./data/sddp.sqlite
+        value: /var/data/sddp.sqlite
       - key: ADMIN_PASSWORD
         sync: false
       - key: ADMIN_SESSION_SECRET

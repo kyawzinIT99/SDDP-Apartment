@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 type SqliteDb = {
@@ -57,8 +57,20 @@ function wrapDatabase(db: SqliteDb): D1Database {
   };
 }
 
+function migrateLegacySqlite(dbPath: string) {
+  if (existsSync(dbPath)) return;
+  const legacy = "./data/sddp.sqlite";
+  if (!existsSync(legacy) || legacy === dbPath) return;
+  mkdirSync(dirname(dbPath) === "." ? "data" : dirname(dbPath), { recursive: true });
+  copyFileSync(legacy, dbPath);
+  for (const suffix of ["-wal", "-shm"]) {
+    if (existsSync(legacy + suffix)) copyFileSync(legacy + suffix, dbPath + suffix);
+  }
+}
+
 export function nodeBindings(dbPath: string): NodeRuntime {
   if (cached) return cached;
+  migrateLegacySqlite(dbPath);
   mkdirSync(dirname(dbPath) === "." ? "data" : dirname(dbPath), { recursive: true });
   const sqlite = openSqlite(dbPath);
   sqlite.exec("PRAGMA journal_mode = WAL");

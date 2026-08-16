@@ -18,12 +18,19 @@ export async function GET(request: Request) {
     const user = await getChatGPTUser();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
     const { DB } = bindings(); await ensureSchema(DB!);
-    const room = new URL(request.url).searchParams.get("room")?.trim() ?? "";
-    const rows = await DB!.prepare(`${selectSql} ORDER BY created_at DESC LIMIT 100`).all();
+    const params = new URL(request.url).searchParams;
+    const room = params.get("room")?.trim() ?? "";
+    const name = params.get("name")?.trim() ?? "";
+    const rows = name
+      ? await DB!.prepare(`${selectSql} WHERE LOWER(resident_name) LIKE ? ORDER BY created_at DESC LIMIT 200`).bind(`%${name.toLowerCase()}%`).all()
+      : await DB!.prepare(`${selectSql} ORDER BY created_at DESC LIMIT 200`).all();
     const lastForRoom = room
       ? await DB!.prepare(`${selectSql} WHERE room_number = ? ORDER BY created_at DESC LIMIT 1`).bind(room).first()
       : null;
-    return Response.json({ invoices: rows.results ?? [], next: await nextNumbers(DB!), lastForRoom });
+    const lastForName = name
+      ? await DB!.prepare(`${selectSql} WHERE LOWER(resident_name) LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(`%${name.toLowerCase()}%`).first()
+      : null;
+    return Response.json({ invoices: rows.results ?? [], next: await nextNumbers(DB!), lastForRoom, lastForName });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invoice list failed";
     return Response.json({ error: message }, { status: 500 });
