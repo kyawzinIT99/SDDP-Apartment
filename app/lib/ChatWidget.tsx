@@ -5,32 +5,14 @@ import { botGreeting, botReply, type BotLanguage } from "./chat-bot";
 
 type Msg = { from: "bot" | "user"; text: string };
 
-// Stable session ID per page load
-function makeSessionId() {
-  return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function saveChatSession(sessionId: string, lang: BotLanguage, msgs: Msg[]) {
-  if (msgs.filter((m) => m.from === "user").length === 0) return; // nothing to save if no user messages
-  const userQuestions = msgs.filter((m) => m.from === "user").length;
-  fetch("/api/chat-logs", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: sessionId, lang, messages: msgs, question_count: userQuestions }),
-  }).catch(() => undefined);
-}
-
-export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; lineId: string; lineHref: string }) {
+export function ChatWidget({ lang, lineId }: { lang: BotLanguage; lineId: string; lineHref: string }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
-  const sessionId = useRef(makeSessionId());
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Re-greet when language changes
   useEffect(() => {
     setMsgs([{ from: "bot", text: botGreeting[lang] }]);
   }, [lang]);
@@ -43,31 +25,16 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, typing]);
 
-  // Auto-save 4 seconds after the last message
-  function scheduleSave(currentMsgs: Msg[], currentLang: BotLanguage) {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => saveChatSession(sessionId.current, currentLang, currentMsgs), 4000);
-  }
-
-  // Also save when widget is closed
-  function handleClose() {
-    setOpen(false);
-    saveChatSession(sessionId.current, lang, msgs);
-  }
-
   function send() {
     const text = input.trim();
     if (!text) return;
     setInput("");
-    const nextMsgs: Msg[] = [...msgs, { from: "user", text }];
-    setMsgs(nextMsgs);
+    const next: Msg[] = [...msgs, { from: "user", text }];
+    setMsgs(next);
     setTyping(true);
     setTimeout(() => {
-      const reply = botReply(text, lang, lineId);
-      const finalMsgs: Msg[] = [...nextMsgs, { from: "bot", text: reply }];
-      setMsgs(finalMsgs);
+      setMsgs([...next, { from: "bot", text: botReply(text, lang, lineId) }]);
       setTyping(false);
-      scheduleSave(finalMsgs, lang);
     }, 600);
   }
 
@@ -90,7 +57,7 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
               <b>SDDP Assistant</b>
               <small>Ask anything about the apartment</small>
             </div>
-            <button onClick={handleClose} aria-label="Close chat">✕</button>
+            <button onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
           </div>
 
           <div className="chat-widget-messages">
@@ -119,7 +86,6 @@ export function ChatWidget({ lang, lineId, lineHref }: { lang: BotLanguage; line
             />
             <button onClick={send} disabled={!input.trim()} aria-label="Send">↑</button>
           </div>
-
         </div>
       )}
     </>

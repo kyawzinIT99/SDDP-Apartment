@@ -5,11 +5,11 @@ import { defaultSiteSettings, publicGallery, type Locale, type SiteSettings } fr
 import { TypedDateField } from "../lib/typed-date";
 import InvoiceDesk from "./InvoiceDesk";
 
-type ChatLog = { id: string; lang: string; messages: { from: "bot" | "user"; text: string }[]; question_count: number; created_at: number; last_seen_at: number };
+type ResidentInvoice = { id: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string };
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
-type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "chatlogs" | "automation";
+type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "automation";
 type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
 
 const emptyResident: ResidentDraft = { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: "", checkOutDate: "", consentConfirmed: false };
@@ -37,8 +37,8 @@ export default function AdminDashboard({ displayName }: { displayName: string })
   const [residentFilter, setResidentFilter] = useState<"active" | "checked_out" | "all">("active");
   const [converting, setConverting] = useState<string>("");
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
-  const [chatLogs, setChatLogs] = useState<ChatLog[]>([]);
-  const [chatLogOpen, setChatLogOpen] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState<string | null>(null);
+  const [residentInvoices, setResidentInvoices] = useState<Record<string, ResidentInvoice[]>>({});
 
   useEffect(() => {
     Promise.all([
@@ -134,13 +134,18 @@ export default function AdminDashboard({ displayName }: { displayName: string })
     inquiries: "Guest pipeline",
     residents: "Resident records",
     invoices: "Printable invoice",
-    chatlogs: "Visitor chat logs",
+    history: "Past residents",
     automation: "Hosting on Render",
   };
 
-  function openChatLogsTab() {
-    setTab("chatlogs");
-    fetch("/api/chat-logs").then((r) => r.ok ? r.json() : []).then((rows) => setChatLogs(Array.isArray(rows) ? rows : [])).catch(() => undefined);
+  async function loadResidentInvoices(resident: Resident) {
+    if (residentInvoices[resident.id]) { setHistoryOpen(historyOpen === resident.id ? null : resident.id); return; }
+    const data = await fetch(`/api/invoices?name=${encodeURIComponent(resident.fullName)}`).then((r) => r.ok ? r.json() : { invoices: [] });
+    const rows: ResidentInvoice[] = (data.invoices ?? []).map((inv: { id: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string }) => ({
+      id: inv.id, invoiceNumber: inv.invoiceNumber, billingMonth: inv.billingMonth, billingYear: inv.billingYear, total: inv.total, issueDate: inv.issueDate,
+    }));
+    setResidentInvoices((prev) => ({ ...prev, [resident.id]: rows }));
+    setHistoryOpen(resident.id);
   }
 
   return <main className="admin-shell">
@@ -153,9 +158,9 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         ["inquiries", `Inquiries (${newInquiries})`],
         ["residents", `Residents (${activeResidents})`],
         ["invoices", "Invoices"],
-        ["chatlogs", `Chat logs (${chatLogs.length})`],
+        ["history", `Past residents (${residents.filter((r) => r.status === "checked_out").length})`],
         ["automation", "Hosting"],
-      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => id === "chatlogs" ? openChatLogsTab() : setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "chatlogs" ? "💬" : "⌁"}</i>{label}</button>)}</div>
+      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "history" ? "◷" : "⌁"}</i>{label}</button>)}</div>
       <div className="admin-user"><span>{displayName.slice(0, 1).toUpperCase()}</span><div><b>{displayName}</b><small>Property editor</small></div><button type="button" className="admin-logout" onClick={logout}>Sign out</button></div>
     </aside>
     <section className="admin-main">
@@ -232,22 +237,41 @@ export default function AdminDashboard({ displayName }: { displayName: string })
 
       {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} seed={invoiceSeed} onStatus={setStatus} />}
 
-      {tab === "chatlogs" && <section className="editor-card chat-log-section">
-        <div className="card-head"><div><span>VISITOR CHAT LOGS</span><h2>Questions asked via the website bot</h2><p>Every session where a visitor typed a question is recorded here. Sessions with no messages are not saved.</p></div><button type="button" className="text-link" onClick={openChatLogsTab}>Refresh ↺</button></div>
-        {chatLogs.length === 0
-          ? <div className="empty-state"><b>No chat sessions yet</b><p>Sessions will appear here after visitors use the chat widget on the public website.</p></div>
-          : chatLogs.map((log) => {
-            const isOpen = chatLogOpen === log.id;
-            const preview = log.messages.find((m) => m.from === "user")?.text ?? "—";
-            const langLabel = log.lang === "th" ? "ไทย" : log.lang === "my" ? "မြန်မာ" : "EN";
-            return <article key={log.id} className="chat-log-card">
-              <div className="chat-log-meta" onClick={() => setChatLogOpen(isOpen ? null : log.id)} style={{ cursor: "pointer" }}>
-                <span className="chat-log-lang">{langLabel}</span>
-                <div><b>{preview.length > 60 ? preview.slice(0, 60) + "…" : preview}</b><small>{log.question_count} question{log.question_count !== 1 ? "s" : ""} · {new Date(log.created_at).toLocaleString()} · last active {new Date(log.last_seen_at).toLocaleString()}</small></div>
-                <i style={{ marginLeft: "auto", opacity: .5 }}>{isOpen ? "▲" : "▼"}</i>
+      {tab === "history" && <section className="editor-card history-section">
+        <div className="card-head"><div><span>PAST RESIDENTS</span><h2>Checked-out guest records</h2><p>Full profile and every invoice issued during their stay. Tap a name to expand the invoice history.</p></div></div>
+        {residents.filter((r) => r.status === "checked_out").length === 0
+          ? <div className="empty-state"><b>No checked-out residents yet</b><p>When you check out an active resident, their record appears here with all invoices attached.</p></div>
+          : residents.filter((r) => r.status === "checked_out").map((r) => {
+            const isOpen = historyOpen === r.id;
+            const invs = residentInvoices[r.id] ?? [];
+            const totalPaid = invs.reduce((sum, inv) => sum + inv.total, 0);
+            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            return <article key={r.id} className="history-card">
+              <div className="history-head" onClick={() => loadResidentInvoices(r)} style={{ cursor: "pointer" }}>
+                <div className="history-avatar">{r.fullName.slice(0,1).toUpperCase()}</div>
+                <div className="history-info">
+                  <b>{r.fullName}</b>
+                  <small>Room {r.roomNumber || "—"} · {r.nationality || "—"} · {r.residentType}</small>
+                  <small>{r.checkInDate ? `Checked in ${r.checkInDate}` : "No check-in date"}{r.checkOutDate ? ` → Checked out ${r.checkOutDate}` : ""}</small>
+                  {r.passportLast4 && <small>Passport •••• {r.passportLast4}</small>}
+                </div>
+                <div className="history-summary">
+                  {isOpen && invs.length > 0 && <b>฿{totalPaid.toLocaleString()}</b>}
+                  {isOpen && invs.length > 0 && <small>{invs.length} invoice{invs.length !== 1 ? "s" : ""}</small>}
+                  <i style={{ opacity: .5, fontSize: 12 }}>{isOpen ? "▲" : "▼ invoices"}</i>
+                </div>
               </div>
-              {isOpen && <div className="chat-log-thread">
-                {log.messages.map((m, i) => <div key={i} className={`chat-log-msg chat-log-msg--${m.from}`}>{m.text}</div>)}
+              {isOpen && <div className="history-invoices">
+                {invs.length === 0
+                  ? <p className="history-none">No invoices found for this resident.</p>
+                  : invs.map((inv) => <div key={inv.id} className="history-inv-row">
+                    <span>#{inv.invoiceNumber}</span>
+                    <span>{monthNames[(inv.billingMonth - 1) % 12]} {inv.billingYear}</span>
+                    <span>{inv.issueDate}</span>
+                    <b>฿{inv.total.toLocaleString()}</b>
+                  </div>)
+                }
+                {invs.length > 0 && <div className="history-inv-total"><span>Total collected</span><b>฿{totalPaid.toLocaleString()}</b></div>}
               </div>}
             </article>;
           })
