@@ -283,7 +283,6 @@ export default function Home() {
 
       <section className="location-section" id="location"><div><span>07 / {t.locationLabel}</span><h2>{t.locationTitle}</h2><p>{settings.address}</p><a href={settings.mapUrl} target="_blank" rel="noreferrer">{t.directions} ↗</a></div><div className="map-frame"><iframe src={settings.mapEmbedUrl} title="SDDP Apartment on Google Maps" loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div></section>
       <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a className="line-official compact" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="" /><span>LINE {lineId}</span></a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
-      <a className="line-float" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="" /><span>{t.chatLine}<b>{lineId}</b></span></a>
       <div className="chat-widget-wrap">
         <ChatWidget lang={language} lineId={lineId} lineHref={lineHref} />
       </div>
