@@ -68,6 +68,13 @@ function migrateLegacySqlite(dbPath: string) {
   }
 }
 
+function renderSqlitePath(requested: string) {
+  if (!requested.startsWith("/var/data")) return requested;
+  if (existsSync("/var/data")) return "/var/data/sddp.sqlite";
+  if (existsSync("/var/data ")) return "/var/data /sddp.sqlite";
+  return "/var/data/sddp.sqlite";
+}
+
 function openAt(path: string): SqliteDb {
   migrateLegacySqlite(path);
   mkdirSync(dirname(path) === "." ? "data" : dirname(path), { recursive: true });
@@ -79,12 +86,13 @@ function openAt(path: string): SqliteDb {
 
 export function nodeBindings(dbPath: string): NodeRuntime {
   if (cached) return cached;
+  const resolved = renderSqlitePath(dbPath);
   let sqlite: SqliteDb;
   try {
-    sqlite = openAt(dbPath);
+    sqlite = openAt(resolved);
   } catch (error) {
-    if (!dbPath.startsWith("/var/data")) throw error;
-    console.error("SDDP sqlite could not use", dbPath, error);
+    if (!resolved.startsWith("/var/data")) throw error;
+    console.error("SDDP sqlite could not use", resolved, error);
     sqlite = openAt("./data/sddp.sqlite");
   }
   cached = {
