@@ -3,7 +3,7 @@ import { occupiedRoomSet } from "../../lib/occupancy";
 import { normalizeRoomNumber, roomCatalog } from "../../lib/rooms";
 import { bindings, ensureSchema } from "../../lib/storage";
 
-type InquiryInput = { name?: string; phone?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
+type InquiryInput = { name?: string; phone?: string; email?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
 type InquiryPatch = { id?: string; status?: string; notes?: string };
 const pipeline = ["new", "contacted", "booked", "lost", "converted"] as const;
 
@@ -18,9 +18,9 @@ export async function POST(request: Request) {
   const availableRooms = roomCatalog.map((room) => room.roomNumber).filter((room) => !occupied.has(room));
   if (occupied.has(roomNumber)) return Response.json({ error: "That room is now occupied. Please choose an available room.", code: "room_unavailable", roomNumber, availableRooms }, { status: 409 });
   const now = Date.now();
-  const record = { id: crypto.randomUUID(), name: input.name.trim().slice(0, 120), phone: input.phone.trim().slice(0, 80), channel: input.channel ?? "phone", stayType: input.stayType ?? "monthly", roomNumber, arrivalDate: input.arrivalDate ?? "", message: input.message?.trim().slice(0, 1000) ?? "", locale: input.locale ?? "en", createdAt: now };
-  await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
-    .bind(record.id, record.name, record.phone, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
+  const record = { id: crypto.randomUUID(), name: input.name.trim().slice(0, 120), phone: input.phone.trim().slice(0, 80), email: input.email?.trim().toLowerCase().slice(0, 160) ?? "", channel: input.channel ?? "phone", stayType: input.stayType ?? "monthly", roomNumber, arrivalDate: input.arrivalDate ?? "", message: input.message?.trim().slice(0, 1000) ?? "", locale: input.locale ?? "en", createdAt: now };
+  await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
+    .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
   let routed = false;
   if (runtime.N8N_INQUIRY_WEBHOOK) {
     try { const response = await fetch(runtime.N8N_INQUIRY_WEBHOOK, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify({ event: "sddp.inquiry.created", ...record }) }); routed = response.ok; } catch { routed = false; }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 export async function GET() {
   const user = await getChatGPTUser(); if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
   const { DB } = bindings(); await ensureSchema(DB!);
-  const rows = await DB!.prepare("SELECT id, name, phone, channel, stay_type AS stayType, room_number AS roomNumber, arrival_date AS arrivalDate, message, locale, status, notes, converted_resident_id AS convertedResidentId, created_at AS createdAt, updated_at AS updatedAt FROM inquiries ORDER BY created_at DESC LIMIT 100").all();
+  const rows = await DB!.prepare("SELECT id, name, phone, email, channel, stay_type AS stayType, room_number AS roomNumber, arrival_date AS arrivalDate, message, locale, status, notes, converted_resident_id AS convertedResidentId, created_at AS createdAt, updated_at AS updatedAt FROM inquiries ORDER BY created_at DESC LIMIT 100").all();
   return Response.json(rows.results ?? []);
 }
 

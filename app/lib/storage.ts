@@ -80,4 +80,5 @@ export async function ensureSchema(db: D1Database) {
   await addColumnIfMissing(db, "inquiries", "notes", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(db, "inquiries", "converted_resident_id", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(db, "inquiries", "updated_at", "INTEGER");
+  await addColumnIfMissing(db, "inquiries", "email", "TEXT NOT NULL DEFAULT ''");
 }

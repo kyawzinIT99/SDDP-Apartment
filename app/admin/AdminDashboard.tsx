@@ -6,7 +6,7 @@ import { TypedDateField } from "../lib/typed-date";
 import InvoiceDesk from "./InvoiceDesk";
 
 type ResidentInvoice = { id: string; bookNumber: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string };
-type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
+type Inquiry = { id: string; name: string; phone: string; email?: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
 type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "users" | "automation";
@@ -292,7 +292,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
         <div className="pipeline-tabs"><button type="button" className={pipelineFilter === "all" ? "active" : ""} onClick={() => setPipelineFilter("all")}>All ({inquiries.length})</button>{pipeline.map((step) => <button type="button" key={step.id} className={pipelineFilter === step.id ? "active" : ""} onClick={() => setPipelineFilter(step.id)}>{step.label} ({inquiries.filter((item) => item.status === step.id).length})</button>)}</div>
         {visibleInquiries.length === 0 ? <div className="empty-state"><b>No inquiries in this step</b><p>New website requests will appear here first.</p></div> : visibleInquiries.map((item) => <article key={item.id} className="pipeline-card">
           <span className={`lead-status ${item.status}`}>{item.status}</span>
-          <div><b>{item.name}</b><small>{item.phone} · {item.channel} · {item.locale.toUpperCase()}</small></div>
+          <div><b>{item.name}</b><small>{item.phone}{item.email ? ` · ${item.email}` : ""} · {item.channel} · {item.locale.toUpperCase()}</small></div>
           <div><b>{item.roomNumber ? `Room ${item.roomNumber}` : item.stayType}</b><small>{item.stayType} · {item.arrivalDate || "Arrival not set"}</small></div>
           <p>{item.message || "No guest note"}</p>
           <time>{new Date(item.createdAt).toLocaleString()}</time>
