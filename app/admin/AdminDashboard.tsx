@@ -11,7 +11,7 @@ type Resident = { id: string; fullName: string; phone: string; email: string; na
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
 type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "users" | "automation";
 type AdminUser = { id: string; username: string; displayName: string; role: "owner" | "admin"; active: number; createdAt: number };
-type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
+type PipelineStatus = "new" | "contacted" | "booked" | "deposit" | "lost" | "converted";
 
 function todayISO() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -24,6 +24,7 @@ const pipeline: { id: PipelineStatus; label: string }[] = [
   { id: "new", label: "New" },
   { id: "contacted", label: "Contacted" },
   { id: "booked", label: "Booked" },
+  { id: "deposit", label: "Deposit ✓" },
   { id: "lost", label: "Lost" },
   { id: "converted", label: "Moved in" },
 ];
@@ -346,9 +347,10 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
               <div><b>{item.roomNumber ? `Room ${item.roomNumber}` : item.stayType}</b><small>{item.stayType} · {item.arrivalDate || "Arrival not set"}</small></div>
               <p>{item.message || "No guest note"}</p>
               <time>{new Date(item.createdAt).toLocaleString()}</time>
-              <div className="pipeline-actions">{pipeline.filter((step) => step.id !== "converted").map((step) => <button type="button" key={step.id} disabled={item.status === "converted"} className={item.status === step.id ? "active" : ""} onClick={() => setInquiryStatus(item.id, step.id)}>{step.label}</button>)}
+              <div className="pipeline-actions">{pipeline.filter((step) => step.id !== "converted").map((step) => <button type="button" key={step.id} disabled={item.status === "converted"} className={`${item.status === step.id ? "active" : ""}${step.id === "deposit" ? " deposit-btn" : ""}`} onClick={() => setInquiryStatus(item.id, step.id)}>{step.label}</button>)}
                 {item.status !== "converted" && <button type="button" className="convert" onClick={() => startConvert(item)}>Move in</button>}
               </div>
+              {item.status === "deposit" && item.roomNumber && <p className="deposit-notice">🔒 Room {item.roomNumber} is held — showing occupied on the website. 50% deposit received. Move in when they arrive, or mark Lost to release the room.</p>}
               <label className="staff-note">Staff note<textarea defaultValue={item.notes ?? ""} rows={2} onBlur={(event) => { if (event.target.value !== (item.notes ?? "")) saveInquiryNotes(item.id, event.target.value); }} /></label>
             </article>)}
             {inquiryPageCount > 1 && <nav className="pagination">

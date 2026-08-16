@@ -5,7 +5,7 @@ import { bindings, ensureSchema } from "../../lib/storage";
 
 type InquiryInput = { name?: string; phone?: string; email?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
 type InquiryPatch = { id?: string; status?: string; notes?: string };
-const pipeline = ["new", "contacted", "booked", "lost", "converted"] as const;
+const pipeline = ["new", "contacted", "booked", "deposit", "lost", "converted"] as const;
 
 export async function POST(request: Request) {
   const input = await request.json() as InquiryInput;
