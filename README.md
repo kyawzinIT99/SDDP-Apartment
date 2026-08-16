@@ -2,7 +2,7 @@
 
 Public marketing website and a progressive CRM for SDDP Apartment in San Kamphaeng, Chiang Mai.
 
-Guests can check live room availability, send an inquiry, and contact the team on phone, WhatsApp, or Line. Staff can follow those inquiries, convert a booked guest into a resident record, and check people out so the public room board updates.
+Guests can check live room availability, send an inquiry, and contact the team on phone or Line. Staff can follow those inquiries, convert a booked guest into a resident record, and check people out so the public room board updates.
 
 ## What is live now
 
