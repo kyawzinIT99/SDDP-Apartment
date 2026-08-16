@@ -73,8 +73,8 @@ export async function ensureSchema(db: D1Database) {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_room ON invoices(room_number, created_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_invoices_name ON invoices(resident_name)"),
-    db.prepare("CREATE TABLE IF NOT EXISTS chat_logs (id TEXT PRIMARY KEY, lang TEXT NOT NULL DEFAULT 'en', messages TEXT NOT NULL DEFAULT '[]', question_count INTEGER NOT NULL DEFAULT 0, user_agent TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL)"),
-    db.prepare("CREATE INDEX IF NOT EXISTS idx_chat_logs_created_at ON chat_logs(created_at)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS admin_users (id TEXT PRIMARY KEY, username TEXT NOT NULL, display_name TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'admin', password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, created_by TEXT NOT NULL DEFAULT '')"),
+    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username)"),
   ]);
   await addColumnIfMissing(db, "inquiries", "room_number", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(db, "inquiries", "notes", "TEXT NOT NULL DEFAULT ''");

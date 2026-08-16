@@ -9,7 +9,8 @@ type ResidentInvoice = { id: string; invoiceNumber: string; billingMonth: number
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
-type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "automation";
+type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "users" | "automation";
+type AdminUser = { id: string; username: string; displayName: string; role: "owner" | "admin"; active: number; createdAt: number };
 type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
 
 const emptyResident: ResidentDraft = { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: "", checkOutDate: "", consentConfirmed: false };
@@ -22,7 +23,7 @@ const pipeline: { id: PipelineStatus; label: string }[] = [
   { id: "converted", label: "Moved in" },
 ];
 
-export default function AdminDashboard({ displayName }: { displayName: string }) {
+export default function AdminDashboard({ displayName, role }: { displayName: string; role?: "owner" | "admin" }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [settings, setSettings] = useState<SiteSettings>(defaultSiteSettings);
   const [locale, setLocale] = useState<Locale>("en");
@@ -39,6 +40,10 @@ export default function AdminDashboard({ displayName }: { displayName: string })
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
   const [historyOpen, setHistoryOpen] = useState<string | null>(null);
   const [residentInvoices, setResidentInvoices] = useState<Record<string, ResidentInvoice[]>>({});
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [userDraft, setUserDraft] = useState({ username: "", displayName: "", role: "admin" as "owner" | "admin", password: "" });
+  const [userStatus, setUserStatus] = useState("");
+  const isOwner = !role || role === "owner";
 
   useEffect(() => {
     Promise.all([
@@ -135,8 +140,36 @@ export default function AdminDashboard({ displayName }: { displayName: string })
     residents: "Resident records",
     invoices: "Printable invoice",
     history: "Past residents",
+    users: "Admin users",
     automation: "Hosting on Render",
   };
+
+  function openUsersTab() {
+    setTab("users");
+    fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then((rows) => setAdminUsers(Array.isArray(rows) ? rows : [])).catch(() => undefined);
+  }
+
+  async function createUser(e: React.FormEvent) {
+    e.preventDefault();
+    setUserStatus("Creating…");
+    const r = await fetch("/api/admin/users", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(userDraft) });
+    const result = await r.json().catch(() => ({})) as { error?: string };
+    if (!r.ok) { setUserStatus(result.error ?? "Failed"); return; }
+    setUserStatus("User created");
+    setUserDraft({ username: "", displayName: "", role: "admin", password: "" });
+    openUsersTab();
+  }
+
+  async function toggleUserActive(id: string, active: boolean) {
+    await fetch("/api/admin/users", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, active }) });
+    setAdminUsers((prev) => prev.map((u) => u.id === id ? { ...u, active: active ? 1 : 0 } : u));
+  }
+
+  async function deleteUser(id: string) {
+    if (!confirm("Delete this admin user permanently?")) return;
+    await fetch("/api/admin/users", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    setAdminUsers((prev) => prev.filter((u) => u.id !== id));
+  }
 
   async function loadResidentInvoices(resident: Resident) {
     if (residentInvoices[resident.id]) { setHistoryOpen(historyOpen === resident.id ? null : resident.id); return; }
@@ -159,8 +192,9 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         ["residents", `Residents (${activeResidents})`],
         ["invoices", "Invoices"],
         ["history", `Past residents (${residents.filter((r) => r.status === "checked_out").length})`],
+        ...(isOwner ? [["users", `Users (${adminUsers.length})`]] as const : []),
         ["automation", "Hosting"],
-      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "history" ? "◷" : "⌁"}</i>{label}</button>)}</div>
+      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => id === "users" ? openUsersTab() : setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "history" ? "◷" : id === "users" ? "👤" : "⌁"}</i>{label}</button>)}</div>
       <div className="admin-user"><span>{displayName.slice(0, 1).toUpperCase()}</span><div><b>{displayName}</b><small>Property editor</small></div><button type="button" className="admin-logout" onClick={logout}>Sign out</button></div>
     </aside>
     <section className="admin-main">
@@ -277,6 +311,39 @@ export default function AdminDashboard({ displayName }: { displayName: string })
           })
         }
       </section>}
+
+      {tab === "users" && isOwner && <div className="users-layout">
+        <form className="editor-card user-form" onSubmit={createUser}>
+          <div className="card-head"><div><span>NEW STAFF ACCOUNT</span><h2>Create admin user</h2><p>Owner accounts can manage all settings and create more users. Admin accounts can use the CRM but cannot manage users.</p></div></div>
+          <label>Username<input required value={userDraft.username} onChange={(e) => setUserDraft({ ...userDraft, username: e.target.value.toLowerCase().replace(/\s/g, "") })} placeholder="e.g. somchai" autoComplete="off" /></label>
+          <label>Display name<input value={userDraft.displayName} onChange={(e) => setUserDraft({ ...userDraft, displayName: e.target.value })} placeholder="e.g. Somchai Jaidee" /></label>
+          <label>Role<select value={userDraft.role} onChange={(e) => setUserDraft({ ...userDraft, role: e.target.value as "owner" | "admin" })}>
+            <option value="admin">Administrator — CRM access, no user management</option>
+            <option value="owner">Owner — full access including user management</option>
+          </select></label>
+          <label>Password<input type="password" required minLength={6} value={userDraft.password} onChange={(e) => setUserDraft({ ...userDraft, password: e.target.value })} autoComplete="new-password" /></label>
+          <button className="admin-save" type="submit">Create staff account <b>↗</b></button>
+          {userStatus && <small style={{ color: userStatus.includes("created") ? "green" : "#b42020" }}>{userStatus}</small>}
+        </form>
+        <section className="editor-card user-list">
+          <div className="card-head"><div><span>STAFF DIRECTORY</span><h2>All admin accounts</h2></div></div>
+          {adminUsers.length === 0
+            ? <div className="empty-state"><b>No named users yet</b><p>Create staff accounts above. The master password always works as the owner login.</p></div>
+            : adminUsers.map((u) => <article key={u.id} className="user-card">
+              <div className="user-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
+              <div>
+                <b>{u.displayName}</b>
+                <small>@{u.username} · <span style={{ color: u.role === "owner" ? "#ee302b" : "#555", fontWeight: 700 }}>{u.role}</span> · {u.active ? "Active" : <span style={{ color: "#aaa" }}>Inactive</span>}</small>
+                <small style={{ color: "#aaa" }}>Created {new Date(u.createdAt).toLocaleDateString()}</small>
+              </div>
+              <div className="user-actions">
+                <button type="button" className="resident-action" onClick={() => toggleUserActive(u.id, !u.active)}>{u.active ? "Deactivate" : "Activate"}</button>
+                <button type="button" className="resident-action" style={{ color: "#b42020" }} onClick={() => deleteUser(u.id)}>Delete</button>
+              </div>
+            </article>)
+          }
+        </section>
+      </div>}
 
       {tab === "automation" && <div className="automation-grid">
         <section className="editor-card automation-status">

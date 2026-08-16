@@ -7,6 +7,7 @@ export type ChatGPTUser = {
   displayName: string;
   email: string;
   fullName: string | null;
+  role?: "owner" | "admin";
 };
 
 const USER_ID_HEADER = "oai-authenticated-user-id";
@@ -25,7 +26,7 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) {
     const session = await readAdminSession(requestHeaders.get("cookie"));
-    if (session) return session;
+    if (session) return { ...session, role: session.role };
     return localPreviewUser(requestHeaders);
   }
 

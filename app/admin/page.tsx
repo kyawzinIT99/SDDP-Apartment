@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const user = await getChatGPTUser();
   if (!user) return <AdminLogin />;
-  return <AdminDashboard displayName={user.displayName} />;
+  return <AdminDashboard displayName={user.displayName} role={user.role} />;
 }
