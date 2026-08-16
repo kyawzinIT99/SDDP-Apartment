@@ -36,8 +36,17 @@ function nodeSqliteAvailable() {
   }
 }
 
+function sqlitePath() {
+  const configured = nodeEnv("SDDP_DB_PATH");
+  if (nodeEnv("RENDER")) {
+    if (configured?.startsWith("/var/data/")) return configured;
+    return "/var/data/sddp.sqlite";
+  }
+  return configured || (nodeSqliteAvailable() ? "./data/sddp.sqlite" : undefined);
+}
+
 export function bindings() {
-  const dbPath = nodeEnv("SDDP_DB_PATH") || (nodeEnv("RENDER") ? "/var/data/sddp.sqlite" : undefined) || (nodeSqliteAvailable() ? "./data/sddp.sqlite" : undefined);
+  const dbPath = sqlitePath();
   if (dbPath) return nodeBindings(dbPath);
   const runtime = (globalThis as GlobalRuntime).__SDDP_RUNTIME;
   if (!runtime?.DB) throw new Error("Database binding is unavailable");
