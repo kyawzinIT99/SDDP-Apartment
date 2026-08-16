@@ -46,6 +46,8 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const [converting, setConverting] = useState<string>("");
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
   const [historyOpen, setHistoryOpen] = useState<string | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PAGE_SIZE = 8;
   const [residentInvoices, setResidentInvoices] = useState<Record<string, ResidentInvoice[]>>({});
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [userDraft, setUserDraft] = useState({ username: "", displayName: "", role: "admin" as "owner" | "admin", password: "" });
@@ -79,6 +81,10 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const inquiryPageSafe = Math.min(inquiryPage, inquiryPageCount);
   const pagedInquiries = visibleInquiries.slice((inquiryPageSafe - 1) * INQUIRY_PAGE_SIZE, inquiryPageSafe * INQUIRY_PAGE_SIZE);
   function setInquiryFilter(f: "all" | PipelineStatus) { setPipelineFilter(f); setInquiryPage(1); }
+  const checkouts = residents.filter((r) => r.status === "checked_out");
+  const historyPageCount = Math.max(1, Math.ceil(checkouts.length / HISTORY_PAGE_SIZE));
+  const historyPageSafe = Math.min(historyPage, historyPageCount);
+  const pagedCheckouts = checkouts.slice((historyPageSafe - 1) * HISTORY_PAGE_SIZE, historyPageSafe * HISTORY_PAGE_SIZE);
 
   async function clearOldLost() {
     const lostOld = inquiries.filter((i) => i.status === "lost" && i.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000).length;
@@ -219,7 +225,6 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   }
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const checkouts = residents.filter((r) => r.status === "checked_out");
 
   async function loadAllInvoices(): Promise<Record<string, ResidentInvoice[]>> {
     const cache: Record<string, ResidentInvoice[]> = { ...residentInvoices };
@@ -405,9 +410,9 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
             <button type="button" className="resident-action" onClick={exportHistoryPDF}>⬇ PDF</button>
           </div>}
         </div>
-        {residents.filter((r) => r.status === "checked_out").length === 0
+        {checkouts.length === 0
           ? <div className="empty-state"><b>No checked-out residents yet</b><p>When you check out an active resident, their record appears here with all invoices attached.</p></div>
-          : residents.filter((r) => r.status === "checked_out").map((r) => {
+          : <>{pagedCheckouts.map((r) => {
             const isOpen = historyOpen === r.id;
             const invs = residentInvoices[r.id] ?? [];
             const totalPaid = invs.reduce((sum, inv) => sum + inv.total, 0);
@@ -440,7 +445,16 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
                 {invs.length > 0 && <div className="history-inv-total"><span>Total collected</span><b>฿{totalPaid.toLocaleString()}</b></div>}
               </div>}
             </article>;
-          })
+          })}
+          {historyPageCount > 1 && <nav className="pagination">
+            <button type="button" className="page-arrow" disabled={historyPageSafe === 1} onClick={() => setHistoryPage((p) => p - 1)}>‹</button>
+            {Array.from({ length: historyPageCount }, (_, i) => i + 1).map((n) => (
+              <button type="button" key={n} className={`page-num${n === historyPageSafe ? " active" : ""}`} onClick={() => setHistoryPage(n)}>{n}</button>
+            ))}
+            <button type="button" className="page-arrow" disabled={historyPageSafe === historyPageCount} onClick={() => setHistoryPage((p) => p + 1)}>›</button>
+            <small>{(historyPageSafe - 1) * HISTORY_PAGE_SIZE + 1}–{Math.min(historyPageSafe * HISTORY_PAGE_SIZE, checkouts.length)} of {checkouts.length}</small>
+          </nav>}
+          </>
         }
       </section>}
 

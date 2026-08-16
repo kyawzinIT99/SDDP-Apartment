@@ -16,6 +16,10 @@ function numberedFloor(floor: number, lastRoom: number): RoomDefinition[] {
 // Master inventory transcribed from the supplied SDDP room drawing. Any new
 // room number stored in the resident database is appended by the public API.
 export const roomCatalog: RoomDefinition[] = [
+  { roomNumber: "101", floor: "1", sortOrder: 101 },
+  { roomNumber: "102", floor: "1", sortOrder: 102 },
+  { roomNumber: "103", floor: "1", sortOrder: 103 },
+  { roomNumber: "104", floor: "1", sortOrder: 104 },
   ...numberedFloor(2, 215),
   ...numberedFloor(3, 316),
   ...numberedFloor(4, 414),
@@ -33,7 +37,7 @@ export function normalizeRoomNumber(value: string): string {
 }
 
 export function inferFloor(roomNumber: string): string {
-  if (/^[234]\d{2}$/.test(roomNumber)) return roomNumber[0];
+  if (/^[1234]\d{2}$/.test(roomNumber)) return roomNumber[0];
   if (/^VIP[12]$/.test(roomNumber)) return "4";
   return "Other";
 }
