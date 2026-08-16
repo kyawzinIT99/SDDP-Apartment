@@ -46,6 +46,8 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const [userDraft, setUserDraft] = useState({ username: "", displayName: "", role: "admin" as "owner" | "admin", password: "" });
   const [userStatus, setUserStatus] = useState("");
   const isOwner = !role || role === "owner";
+  const [editingDates, setEditingDates] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState({ checkInDate: "", checkOutDate: "" });
 
   useEffect(() => {
     Promise.all([
@@ -118,6 +120,15 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     if (!response.ok) { setStatus("Resident status update failed"); return; }
     setResidents((current) => current.map((resident) => resident.id === id ? { ...resident, status: nextStatus } : resident));
     setStatus(nextStatus === "checked_out" ? "Room released on the public website" : "Room marked occupied on the public website");
+    await refreshRooms();
+  }
+  async function updateResidentDates(id: string) {
+    setStatus("Saving dates…");
+    const response = await fetch("/api/residents", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, checkInDate: dateDraft.checkInDate, checkOutDate: dateDraft.checkOutDate }) });
+    if (!response.ok) { setStatus("Date update failed"); return; }
+    setResidents((current) => current.map((r) => r.id === id ? { ...r, checkInDate: dateDraft.checkInDate, checkOutDate: dateDraft.checkOutDate } : r));
+    setEditingDates(null);
+    setStatus("Dates updated — room status refreshed");
     await refreshRooms();
   }
   async function setInquiryStatus(id: string, nextStatus: PipelineStatus) {
@@ -366,9 +377,16 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
           {visibleResidents.length === 0 ? <div className="empty-state"><b>No residents in this view</b><p>Add a resident or convert a booked inquiry.</p></div> : visibleResidents.map((resident) => <article key={resident.id}>
             <div><b>{resident.fullName}</b><small>{resident.nationality || "Nationality not set"} · {resident.residentType}</small></div>
             <div><b>Room {resident.roomNumber || "—"}</b><small>{resident.phone || resident.email || "No contact supplied"}</small></div>
-            <div><b>{resident.passportLast4 ? `Passport •••• ${resident.passportLast4}` : "No passport stored"}</b><small>{resident.status.replace("_", " ")}</small></div>
+            <div><b>{resident.passportLast4 ? `Passport •••• ${resident.passportLast4}` : "No passport stored"}</b><small>{resident.checkInDate ? `In: ${resident.checkInDate}` : "No check-in date"}{resident.checkOutDate ? ` · Out: ${resident.checkOutDate}` : ""}</small></div>
             <button type="button" className="resident-action" onClick={() => { setInvoiceSeed({ fullName: resident.fullName, roomNumber: resident.roomNumber, nationality: resident.nationality }); setTab("invoices"); setStatus(`Invoice started for ${resident.fullName}`); }}>Invoice</button>
+            <button type="button" className="resident-action" onClick={() => { if (editingDates === resident.id) { setEditingDates(null); } else { setDateDraft({ checkInDate: resident.checkInDate ?? "", checkOutDate: resident.checkOutDate ?? "" }); setEditingDates(resident.id); } }}>Dates</button>
             <button type="button" className="resident-action" onClick={() => setResidentStatus(resident.id, resident.status === "active" ? "checked_out" : "active")}>{resident.status === "active" ? "Check out" : "Reactivate"}</button>
+            {editingDates === resident.id && <div className="date-edit-row" style={{ gridColumn: "1 / -1", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 4 }}>
+              <label style={{ fontSize: 12 }}>Check-in<TypedDateField value={dateDraft.checkInDate} onChange={(v) => setDateDraft({ ...dateDraft, checkInDate: v })} /></label>
+              <label style={{ fontSize: 12 }}>Check-out<TypedDateField value={dateDraft.checkOutDate} onChange={(v) => setDateDraft({ ...dateDraft, checkOutDate: v })} /></label>
+              <button type="button" className="resident-action" style={{ background: "#1a7a3c", color: "#fff" }} onClick={() => updateResidentDates(resident.id)}>Save</button>
+              <button type="button" className="resident-action" onClick={() => setEditingDates(null)}>Cancel</button>
+            </div>}
           </article>)}
         </section>
       </div>}

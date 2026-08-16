@@ -11,7 +11,7 @@ type ResidentInput = {
   fromInquiryId?: string;
 };
 
-type ResidentStatusInput = { id?: string; status?: string };
+type ResidentStatusInput = { id?: string; status?: string; checkInDate?: string; checkOutDate?: string };
 
 const clean = (value: string | undefined, length: number) => value?.trim().slice(0, length) ?? "";
 
@@ -79,9 +79,19 @@ export async function PATCH(request: Request) {
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
   const input = await request.json() as ResidentStatusInput;
   const id = clean(input.id, 80);
-  const status = input.status === "checked_out" ? "checked_out" : input.status === "active" ? "active" : "";
-  if (!id || !status) return Response.json({ error: "A valid resident and status are required" }, { status: 400 });
+  if (!id) return Response.json({ error: "Resident id is required" }, { status: 400 });
   const { DB } = bindings(); await ensureSchema(DB!);
+
+  if (input.checkInDate !== undefined || input.checkOutDate !== undefined) {
+    const checkInDate = clean(input.checkInDate, 20);
+    const checkOutDate = clean(input.checkOutDate, 20);
+    await DB!.prepare("UPDATE residents SET check_in_date = ?, check_out_date = ?, updated_at = ? WHERE id = ?")
+      .bind(checkInDate, checkOutDate, Date.now(), id).run();
+    return Response.json({ ok: true, id, checkInDate, checkOutDate });
+  }
+
+  const status = input.status === "checked_out" ? "checked_out" : input.status === "active" ? "active" : "";
+  if (!status) return Response.json({ error: "A valid status or dates are required" }, { status: 400 });
   await DB!.prepare("UPDATE residents SET status = ?, updated_at = ? WHERE id = ?")
     .bind(status, Date.now(), id).run();
   return Response.json({ ok: true, id, status });
