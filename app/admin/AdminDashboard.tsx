@@ -43,12 +43,12 @@ export default function AdminDashboard({ displayName }: { displayName: string })
       fetch("/api/rooms").then((r) => r.ok ? r.json() : { rooms: [] }),
     ]).then(([site, leads, residentRows, automation, rooms]) => {
       setSettings(site);
-      setInquiries(leads);
-      setResidents(residentRows);
+      setInquiries(Array.isArray(leads) ? leads : []);
+      setResidents(Array.isArray(residentRows) ? residentRows : []);
       setN8nReady(Boolean(automation.n8nConfigured));
       setHosting(automation.hosting ?? "render-sqlite");
       setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
-      setStatus("All changes saved");
+      setStatus(Array.isArray(residentRows) ? "All changes saved" : "Admin APIs are not connected");
     }).catch(() => setStatus("Could not load the latest data"));
   }, []);
 
@@ -62,14 +62,23 @@ export default function AdminDashboard({ displayName }: { displayName: string })
   function toggleGallery(image: string) { setSettings((current) => ({ ...current, galleryHidden: current.galleryHidden.includes(image) ? current.galleryHidden.filter((item) => item !== image) : [...current.galleryHidden, image] })); setStatus("Unsaved changes"); }
   async function saveSettings() { setStatus("Saving…"); const response = await fetch("/api/site", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(settings) }); setStatus(response.ok ? "Published to the website" : "Save failed — try again"); }
   async function save(event: FormEvent) { event.preventDefault(); await saveSettings(); }
+  async function refreshRooms() {
+    const rooms = await fetch("/api/rooms").then((value) => value.ok ? value.json() : { rooms: [] });
+    setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
+  }
   async function addResident(event: FormEvent) {
     event.preventDefault(); setStatus("Saving resident securely…");
-    const response = await fetch("/api/residents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(residentDraft) });
-    const result = await response.json();
-    if (!response.ok) { setStatus(result.error ?? "Resident save failed"); return; }
-    const rows = await fetch("/api/residents").then((value) => value.json());
-    const leads = await fetch("/api/inquiries").then((value) => value.ok ? value.json() : inquiries);
-    setResidents(rows); setInquiries(leads); setResidentDraft(emptyResident); setConverting(""); setStatus("Resident saved securely"); setTab("residents");
+    try {
+      const response = await fetch("/api/residents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(residentDraft) });
+      const result = await response.json().catch(() => ({ error: `Resident save failed (${response.status})` }));
+      if (!response.ok) { setStatus(result.error ?? "Resident save failed"); return; }
+      const rows = await fetch("/api/residents").then((value) => value.json());
+      const leads = await fetch("/api/inquiries").then((value) => value.ok ? value.json() : inquiries);
+      setResidents(Array.isArray(rows) ? rows : []); setInquiries(Array.isArray(leads) ? leads : inquiries); setResidentDraft(emptyResident); setConverting(""); setStatus(result.resident?.roomNumber ? `Resident saved — room ${result.resident.roomNumber} is now occupied` : "Resident saved securely"); setTab("residents");
+      await refreshRooms();
+    } catch {
+      setStatus("Resident save failed — the server did not respond");
+    }
   }
   async function setResidentStatus(id: string, nextStatus: "active" | "checked_out") {
     setStatus(nextStatus === "checked_out" ? "Checking resident out…" : "Reactivating resident…");
@@ -77,6 +86,7 @@ export default function AdminDashboard({ displayName }: { displayName: string })
     if (!response.ok) { setStatus("Resident status update failed"); return; }
     setResidents((current) => current.map((resident) => resident.id === id ? { ...resident, status: nextStatus } : resident));
     setStatus(nextStatus === "checked_out" ? "Room released on the public website" : "Room marked occupied on the public website");
+    await refreshRooms();
   }
   async function setInquiryStatus(id: string, nextStatus: PipelineStatus) {
     setStatus("Updating inquiry…");

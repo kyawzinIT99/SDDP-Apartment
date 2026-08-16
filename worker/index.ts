@@ -27,6 +27,7 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    (globalThis as typeof globalThis & { __SDDP_RUNTIME?: Env }).__SDDP_RUNTIME = env;
     const url = new URL(request.url);
 
     if (url.pathname === "/_vinext/image") {

@@ -1,7 +1,7 @@
 import { normalizeRoomNumber, publicRoomBoard } from "./rooms";
 import type { D1Database } from "./storage";
 
-function bangkokToday() {
+export function bangkokToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 

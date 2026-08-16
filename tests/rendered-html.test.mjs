@@ -53,9 +53,12 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(residentApi, /encryptPassport/);
   assert.match(residentApi, /consentConfirmed/);
   assert.match(residentApi, /fromInquiryId/);
+  assert.match(residentApi, /normalizeRoomNumber/);
   assert.match(occupancy, /SELECT DISTINCT room_number/);
   assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
   assert.match(roomsApi, /source: "database"/);
+  assert.doesNotMatch(storage, /cloudflare:workers/);
+  assert.match(storage, /nodeSqliteAvailable|nodeBindings/);
   assert.match(inquiryApi, /room_required/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS residents/);
   assert.match(admin, /Website content/);
