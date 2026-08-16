@@ -149,7 +149,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then((rows) => setAdminUsers(Array.isArray(rows) ? rows : [])).catch(() => undefined);
   }
 
-  async function createUser(e: React.FormEvent) {
+  async function createUser(e: FormEvent) {
     e.preventDefault();
     setUserStatus("Creating…");
     const r = await fetch("/api/admin/users", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(userDraft) });
