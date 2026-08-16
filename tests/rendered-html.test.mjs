@@ -22,7 +22,7 @@ test("server-renders the SDDP public site", async () => {
 });
 
 test("keeps the public facts and automation endpoints in source", async () => {
-  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy, crypto, typedDate] = await Promise.all([
+  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy, crypto, typedDate, invoiceApi, invoiceSheet] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/site-defaults.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/inquiries/route.ts", import.meta.url), "utf8"),
@@ -33,6 +33,8 @@ test("keeps the public facts and automation endpoints in source", async () => {
     readFile(new URL("../app/lib/occupancy.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/guest-crypto.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/typed-date.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/invoices/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/InvoiceSheet.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(defaults, /4,000/);
   assert.match(defaults, /094-293-5296/);
@@ -76,5 +78,10 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(admin, /Guest pipeline/);
   assert.match(admin, /Render free now, VPS later/);
   assert.match(admin, /Move in/);
+  assert.match(admin, /Printable invoice|InvoiceDesk/);
+  assert.match(storage, /CREATE TABLE IF NOT EXISTS invoices/);
+  assert.match(invoiceApi, /buildInvoice/);
+  assert.match(invoiceSheet, /ใบแจ้งหนี้/);
+  assert.match(invoiceSheet, /ค่าเช่าห้อง/);
   assert.doesNotMatch(admin, /Existing VPS/);
 });

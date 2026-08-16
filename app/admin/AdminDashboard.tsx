@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { defaultSiteSettings, publicGallery, type Locale, type SiteSettings } from "../lib/site-defaults";
 import { TypedDateField } from "../lib/typed-date";
+import InvoiceDesk from "./InvoiceDesk";
 
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
-type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "automation";
+type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "automation";
 type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
 
 const emptyResident: ResidentDraft = { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: "", checkOutDate: "", consentConfirmed: false };
@@ -34,6 +35,7 @@ export default function AdminDashboard({ displayName }: { displayName: string })
   const [pipelineFilter, setPipelineFilter] = useState<"all" | PipelineStatus>("all");
   const [residentFilter, setResidentFilter] = useState<"active" | "checked_out" | "all">("active");
   const [converting, setConverting] = useState<string>("");
+  const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -128,6 +130,7 @@ export default function AdminDashboard({ displayName }: { displayName: string })
     gallery: "Photo gallery",
     inquiries: "Guest pipeline",
     residents: "Resident records",
+    invoices: "Printable invoice",
     automation: "Hosting & later VPS",
   };
 
@@ -140,8 +143,9 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         ["gallery", "Photo gallery"],
         ["inquiries", `Inquiries (${newInquiries})`],
         ["residents", `Residents (${activeResidents})`],
+        ["invoices", "Invoices"],
         ["automation", "Hosting"],
-      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : "⌁"}</i>{label}</button>)}</div>
+      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : "⌁"}</i>{label}</button>)}</div>
       <div className="admin-user"><span>{displayName.slice(0, 1).toUpperCase()}</span><div><b>{displayName}</b><small>Property editor</small></div><button type="button" className="admin-logout" onClick={logout}>Sign out</button></div>
     </aside>
     <section className="admin-main">
@@ -210,10 +214,13 @@ export default function AdminDashboard({ displayName }: { displayName: string })
             <div><b>{resident.fullName}</b><small>{resident.nationality || "Nationality not set"} · {resident.residentType}</small></div>
             <div><b>Room {resident.roomNumber || "—"}</b><small>{resident.phone || resident.email || "No contact supplied"}</small></div>
             <div><b>{resident.passportLast4 ? `Passport •••• ${resident.passportLast4}` : "No passport stored"}</b><small>{resident.status.replace("_", " ")}</small></div>
+            <button type="button" className="resident-action" onClick={() => { setInvoiceSeed({ fullName: resident.fullName, roomNumber: resident.roomNumber, nationality: resident.nationality }); setTab("invoices"); setStatus(`Invoice started for ${resident.fullName}`); }}>Invoice</button>
             <button type="button" className="resident-action" onClick={() => setResidentStatus(resident.id, resident.status === "active" ? "checked_out" : "active")}>{resident.status === "active" ? "Check out" : "Reactivate"}</button>
           </article>)}
         </section>
       </div>}
+
+      {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} photo={`/gallery/${settings.heroImage}`} seed={invoiceSeed} onStatus={setStatus} />}
 
       {tab === "automation" && <div className="automation-grid">
         <section className="editor-card automation-status">
@@ -231,7 +238,7 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         <section className="editor-card flow-card">
           <span>PROGRESSIVE CRM</span>
           <div className="flow"><b>Website form</b><i>→</i><b>Inquiry pipeline</b><i>→</i><b>Resident record</b><i>→</i><b>Live room status</b></div>
-          <p>Start with inquiries and occupancy. Add billing, contracts, and a persistent VPS disk when you are ready. Passport data stays encrypted and is never sent in notifications.</p>
+          <p>Start with inquiries and occupancy. Print the original SDDP invoice from the Invoices tab. Add a persistent VPS disk when you are ready. Passport data stays encrypted and is never sent in notifications.</p>
         </section>
       </div>}
     </section>
