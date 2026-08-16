@@ -22,7 +22,7 @@ test("server-renders the SDDP public site", async () => {
 });
 
 test("keeps the public facts and automation endpoints in source", async () => {
-  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy] = await Promise.all([
+  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy, crypto] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/site-defaults.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/inquiries/route.ts", import.meta.url), "utf8"),
@@ -31,6 +31,7 @@ test("keeps the public facts and automation endpoints in source", async () => {
     readFile(new URL("../app/lib/storage.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminDashboard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/occupancy.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/guest-crypto.ts", import.meta.url), "utf8"),
   ]);
   assert.match(defaults, /4,000/);
   assert.match(defaults, /094-293-5296/);
@@ -54,6 +55,9 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(residentApi, /consentConfirmed/);
   assert.match(residentApi, /fromInquiryId/);
   assert.match(residentApi, /normalizeRoomNumber/);
+  assert.match(crypto, /SHA-256/);
+  assert.match(crypto, /tryDecodeBase64/);
+  assert.match(residentApi, /Invalid character/);
   assert.match(occupancy, /SELECT DISTINCT room_number/);
   assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
   assert.match(roomsApi, /source: "database"/);

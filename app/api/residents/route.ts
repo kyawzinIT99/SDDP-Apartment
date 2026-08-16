@@ -39,8 +39,14 @@ export async function POST(request: Request) {
 
     const runtime = bindings(); await ensureSchema(runtime.DB!);
     const passport = clean(input.passportNumber, 40).replace(/\s+/g, "").toUpperCase();
-    if (passport && !runtime.GUEST_DATA_ENCRYPTION_KEY) return Response.json({ error: "Encrypted passport storage is not configured" }, { status: 503 });
-    const passportCiphertext = passport ? await encryptPassport(passport, runtime.GUEST_DATA_ENCRYPTION_KEY!) : null;
+    let passportCiphertext = "";
+    if (passport && runtime.GUEST_DATA_ENCRYPTION_KEY) {
+      try {
+        passportCiphertext = await encryptPassport(passport, runtime.GUEST_DATA_ENCRYPTION_KEY);
+      } catch {
+        passportCiphertext = "";
+      }
+    }
     const now = Date.now();
     const record = {
       id: crypto.randomUUID(), fullName, phone: clean(input.phone, 80), email: clean(input.email, 160).toLowerCase(),
@@ -57,7 +63,10 @@ export async function POST(request: Request) {
     }
     return Response.json({ ok: true, resident: { ...record, passportCiphertext: undefined } }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Resident save failed";
+    const raw = error instanceof Error ? error.message : "";
+    const message = !raw || raw === "Invalid character"
+      ? "Resident save failed. Leave the passport field empty and try again, or set a simple GUEST_DATA_ENCRYPTION_KEY on Render."
+      : raw;
     return Response.json({ error: message }, { status: 500 });
   }
 }
