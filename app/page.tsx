@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { defaultSiteSettings, lineChatUrl, officialLineId, publicGallery, type SiteSettings } from "./lib/site-defaults";
 import { catalogBoard, type PublicRoom } from "./lib/rooms";
+import { TypedDateField } from "./lib/typed-date";
 
 type Language = "en" | "th" | "my";
 type RoomAvailability = PublicRoom;
@@ -272,7 +273,7 @@ export default function Home() {
           <label>{t.name}<input name="name" required autoComplete="name" /></label>
           <label>{t.contact}<input name="phone" required autoComplete="tel" /></label>
           <div className="form-row"><label>{t.stay}<select name="stayType"><option value="monthly">{t.monthlyOption}</option><option value="daily">{t.dailyOption}</option></select></label><label>{t.room}<select name="roomNumber" required value={selectedRoom} onChange={(event) => { const next = availability.rooms.find((room) => room.roomNumber === event.target.value); if (next && next.status !== "available") { setFormNotice(t.occupiedPick); setSelectedRoom(""); return; } setSelectedRoom(event.target.value); setFormNotice(""); }}><option value="">{availableCount ? t.chooseRoom : t.noRooms}</option>{availableRooms.map((room) => <option key={room.roomNumber} value={room.roomNumber}>{room.roomNumber} — {t.available}</option>)}</select></label></div>
-          <label>{t.arrival}<input name="arrivalDate" type="date" /></label>
+          <label>{t.arrival}<TypedDateField name="arrivalDate" /></label>
           <label>{t.note}<textarea name="message" rows={3} /></label>
           <button className="form-submit" disabled={formStatus === "sending" || !selectedIsAvailable}>{formStatus === "sending" ? t.sending : t.send}<b>↗</b></button>
           <div aria-live="polite">{formNotice && <p className="form-message">{formNotice}</p>}{formStatus === "sent" && <p className="form-message success">{t.sent}</p>}{formStatus === "error" && <p className="form-message">{t.formError}</p>}</div>

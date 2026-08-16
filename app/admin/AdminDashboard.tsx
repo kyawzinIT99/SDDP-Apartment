@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { defaultSiteSettings, publicGallery, type Locale, type SiteSettings } from "../lib/site-defaults";
+import { TypedDateField } from "../lib/typed-date";
 
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
@@ -195,8 +196,8 @@ export default function AdminDashboard({ displayName }: { displayName: string })
             <label>Nationality<input value={residentDraft.nationality} onChange={(e) => setResidentDraft({ ...residentDraft, nationality: e.target.value })} /></label>
             <label>Passport number<input autoComplete="off" value={residentDraft.passportNumber} onChange={(e) => setResidentDraft({ ...residentDraft, passportNumber: e.target.value })} /></label>
             <label>Room number<input value={residentDraft.roomNumber} onChange={(e) => setResidentDraft({ ...residentDraft, roomNumber: e.target.value })} /></label>
-            <label>Check-in<input type="date" value={residentDraft.checkInDate} onChange={(e) => setResidentDraft({ ...residentDraft, checkInDate: e.target.value })} /></label>
-            <label>Check-out<input type="date" value={residentDraft.checkOutDate} onChange={(e) => setResidentDraft({ ...residentDraft, checkOutDate: e.target.value })} /></label>
+            <label>Check-in<TypedDateField value={residentDraft.checkInDate} onChange={(checkInDate) => setResidentDraft({ ...residentDraft, checkInDate })} /></label>
+            <label>Check-out<TypedDateField value={residentDraft.checkOutDate} onChange={(checkOutDate) => setResidentDraft({ ...residentDraft, checkOutDate })} /></label>
           </div>
           <label className="consent-check"><input type="checkbox" checked={residentDraft.consentConfirmed} onChange={(e) => setResidentDraft({ ...residentDraft, consentConfirmed: e.target.checked })} /> Resident consent or a valid registration basis has been confirmed.</label>
           <button className="admin-save" type="submit">{converting ? "Save and occupy this room" : "Save private resident record"} <b>↗</b></button>
