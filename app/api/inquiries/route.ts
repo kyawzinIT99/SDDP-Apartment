@@ -9,7 +9,7 @@ const pipeline = ["new", "contacted", "booked", "lost", "converted"] as const;
 
 export async function POST(request: Request) {
   const input = await request.json() as InquiryInput;
-  if (!input.name?.trim() || !input.phone?.trim()) return Response.json({ error: "Name and contact are required" }, { status: 400 });
+  if (!input.name?.trim() || !input.phone?.trim() || !input.email?.trim()) return Response.json({ error: "Name, contact and email are required" }, { status: 400 });
   const roomNumber = normalizeRoomNumber(input.roomNumber ?? "");
   if (!roomNumber) return Response.json({ error: "Please select an available room", code: "room_required" }, { status: 400 });
   if (!roomCatalog.some((room) => room.roomNumber === roomNumber)) return Response.json({ error: "Please select a valid room", code: "invalid_room" }, { status: 400 });
