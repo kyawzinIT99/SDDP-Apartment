@@ -5,7 +5,7 @@ import { botGreeting, botReply, type BotLanguage } from "./chat-bot";
 
 type Msg = { from: "bot" | "user"; text: string };
 
-export function ChatWidget({ lang, lineId }: { lang: BotLanguage; lineId: string; lineHref: string }) {
+export function ChatWidget({ lang, lineId }: { lang: BotLanguage; lineId: string }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");

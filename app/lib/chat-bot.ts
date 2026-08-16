@@ -341,7 +341,7 @@ const qa: QA[] = [
 
   // Contact / phone / Line
   {
-    patterns: [/contact|phone|call|line|whatsapp|reach|get in touch|ติดต่อ|โทร|ไลน์|ဆက်သွယ်|ဖုန်း|Line/i],
+    patterns: [/contact|phone|call|line|reach|get in touch|ติดต่อ|โทร|ไลน์|ဆက်သွယ်|ဖုန်း|Line/i],
     answer: (l) => ({
       en: `📞 ${K.phone[0]} / ${K.phone[1]}\n💬 Line: @${K.line}\n📘 Facebook: ${K.facebook}`,
       th: `📞 ${K.phone[0]} / ${K.phone[1]}\n💬 Line: @${K.line}\n📘 Facebook: ${K.facebook}`,
@@ -350,17 +350,17 @@ const qa: QA[] = [
   },
 ];
 
-// ─── Fallback — show Line contact ──────────────────────────────────────
+// ─── Fallback — direct to inquiry form + Line ───────────────────────────
 const fallback: Record<BotLanguage, (line: string) => string> = {
-  en: (line) => `I'm not sure about that one 🙏 For a direct answer, chat with our team on Line:\n\n💬 @${line}\n📞 ${K.phone[0]}\n\nWe're happy to help!`,
-  th: (line) => `ขอโทษที ไม่แน่ใจในเรื่องนั้น 🙏 สำหรับคำตอบตรงๆ ติดต่อทีมงานเราทาง Line:\n\n💬 @${line}\n📞 ${K.phone[0]}`,
-  my: (line) => `ထိုကိစ္စနှင့်ပတ်သက်၍ မသေချာပါ 🙏 တိုက်ရိုက်အဖြေရရှိရန် Line မှ ဆက်သွယ်ပါ:\n\n💬 @${line}\n📞 ${K.phone[0]}`,
+  en: (line) => `I'm not sure about that one 🙏 Please fill in the inquiry form on this page and our team will contact you shortly.\n\n📞 ${K.phone[0]}\n💬 Line: @${line}`,
+  th: (line) => `ขอโทษที ไม่แน่ใจในเรื่องนั้น 🙏 กรุณากรอกฟอร์มสอบถามในหน้านี้ ทีมงานจะติดต่อกลับเร็วๆ นี้\n\n📞 ${K.phone[0]}\n💬 Line: @${line}`,
+  my: (line) => `ထိုကိစ္စနှင့်ပတ်သက်၍ မသေချာပါ 🙏 ဤစာမျက်နှာရှိ inquiry form ကို ဖြည့်ပေးပါ၊ အဖွဲ့မှ မကြာမီ ဆက်သွယ်ပေးမည်ဖြစ်သည်။\n\n📞 ${K.phone[0]}\n💬 Line: @${line}`,
 };
 
 export function botReply(text: string, lang: BotLanguage, lineId: string): string {
   const q = text.trim();
   if (!q) return "";
-  const footer = `\n\n💬 @${lineId}\n📞 ${K.phone[0]}`;
+  const footer = `\n\n📞 ${K.phone[0]}\n💬 Line: @${lineId}`;
   for (const item of qa) {
     if (item.patterns.some((p) => p.test(q))) {
       return item.answer(lang) + footer;

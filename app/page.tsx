@@ -244,8 +244,7 @@ export default function Home() {
             <small>{t.offer}</small>
             <b>{settings.promotion}</b>
             <span>{t.chatLine}</span>
-            <p>LINE {lineId}</p>
-            <a href={lineHref} target="_blank" rel="noreferrer">{t.chatLine}</a>
+            <a href="#inquiry">{t.check}</a>
           </article>
         </div>
       </section>
@@ -283,7 +282,7 @@ export default function Home() {
       </section>
 
       <section className="inquiry-section" id="inquiry">
-        <div className="inquiry-copy"><span>06 / {t.inquiryLabel}</span><h2>{t.inquiryTitle}</h2><p>{t.inquirySub}</p><div className="direct-contact"><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a className="line-official" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="SDDP Apartment" /><span><b>LINE</b><small>{lineId}</small></span></a></div></div>
+        <div className="inquiry-copy"><span>06 / {t.inquiryLabel}</span><h2>{t.inquiryTitle}</h2><p>{t.inquirySub}</p><div className="direct-contact"><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a></div></div>
         <form onSubmit={submitInquiry}>
           <label>{t.name}<input name="name" required autoComplete="name" /></label>
           <label>{t.contact}<input name="phone" required autoComplete="tel" /></label>
@@ -297,9 +296,9 @@ export default function Home() {
       </section>
 
       <section className="location-section" id="location"><div><span>07 / {t.locationLabel}</span><h2>{t.locationTitle}</h2><p>{settings.address}</p><a href={settings.mapUrl} target="_blank" rel="noreferrer">{t.directions} ↗</a></div><div className="map-frame"><iframe src={settings.mapEmbedUrl} title="SDDP Apartment on Google Maps" loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div></section>
-      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a className="line-official compact" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="" /><span>LINE {lineId}</span></a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
+      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
       <div className="chat-widget-wrap">
-        <ChatWidget lang={language} lineId={lineId} lineHref={lineHref} />
+        <ChatWidget lang={language} lineId={lineId} />
       </div>
     </main>
   );
