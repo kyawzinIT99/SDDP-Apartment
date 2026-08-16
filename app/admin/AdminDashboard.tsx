@@ -13,7 +13,12 @@ type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "inv
 type AdminUser = { id: string; username: string; displayName: string; role: "owner" | "admin"; active: number; createdAt: number };
 type PipelineStatus = "new" | "contacted" | "booked" | "lost" | "converted";
 
-const emptyResident: ResidentDraft = { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: "", checkOutDate: "", consentConfirmed: false };
+function todayISO() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function emptyResident(): ResidentDraft {
+  return { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: todayISO(), checkOutDate: "", consentConfirmed: false };
+}
 const editableCopy = ["eyebrow", "title", "intro", "essentials", "gallery", "gallerySub", "inquiryTitle", "inquirySub", "locationTitle"];
 const pipeline: { id: PipelineStatus; label: string }[] = [
   { id: "new", label: "New" },
@@ -108,7 +113,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       if (!response.ok) { setStatus(result.error ?? "Resident save failed"); return; }
       const rows = await fetch("/api/residents").then((value) => value.json());
       const leads = await fetch("/api/inquiries").then((value) => value.ok ? value.json() : inquiries);
-      setResidents(Array.isArray(rows) ? rows : []); setInquiries(Array.isArray(leads) ? leads : inquiries); setResidentDraft(emptyResident); setConverting(""); setStatus(result.resident?.roomNumber ? `Resident saved — room ${result.resident.roomNumber} is now occupied` : "Resident saved securely"); setTab("residents");
+      setResidents(Array.isArray(rows) ? rows : []); setInquiries(Array.isArray(leads) ? leads : inquiries); setResidentDraft(emptyResident()); setConverting(""); setStatus(result.resident?.roomNumber ? `Resident saved — room ${result.resident.roomNumber} is now occupied` : "Resident saved securely"); setTab("residents");
       await refreshRooms();
     } catch {
       setStatus("Resident save failed — the server did not respond");
@@ -147,7 +152,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   function startConvert(inquiry: Inquiry) {
     setConverting(inquiry.id);
     setResidentDraft({
-      ...emptyResident,
+      ...emptyResident(),
       fullName: inquiry.name,
       phone: inquiry.phone,
       residentType: inquiry.stayType || "monthly",
