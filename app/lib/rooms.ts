@@ -37,3 +37,24 @@ export function inferFloor(roomNumber: string): string {
   if (/^VIP[12]$/.test(roomNumber)) return "4";
   return "Other";
 }
+
+export type PublicRoomStatus = "available" | "occupied" | "unknown";
+export type PublicRoom = { roomNumber: string; floor: string; status: PublicRoomStatus };
+
+export function publicRoomBoard(occupied: Set<string>, connected: boolean): PublicRoom[] {
+  const masterNumbers = new Set(roomCatalog.map((room) => room.roomNumber));
+  const extra = [...occupied]
+    .filter((roomNumber) => !masterNumbers.has(roomNumber))
+    .map((roomNumber, index) => ({ roomNumber, floor: inferFloor(roomNumber), sortOrder: 9000 + index }));
+  return [...roomCatalog, ...extra]
+    .sort((a, b) => a.floor.localeCompare(b.floor) || a.sortOrder - b.sortOrder)
+    .map((room) => ({
+      roomNumber: room.roomNumber,
+      floor: room.floor,
+      status: connected ? (occupied.has(room.roomNumber) ? "occupied" : "available") : "unknown",
+    }));
+}
+
+export function catalogBoard(): PublicRoom[] {
+  return publicRoomBoard(new Set(), false);
+}

@@ -22,7 +22,7 @@ test("server-renders the SDDP public site", async () => {
 });
 
 test("keeps the public facts and automation endpoints in source", async () => {
-  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin] = await Promise.all([
+  const [page, defaults, inquiryApi, residentApi, roomsApi, storage, admin, occupancy] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/site-defaults.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/inquiries/route.ts", import.meta.url), "utf8"),
@@ -30,24 +30,33 @@ test("keeps the public facts and automation endpoints in source", async () => {
     readFile(new URL("../app/api/rooms/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/storage.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminDashboard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/occupancy.ts", import.meta.url), "utf8"),
   ]);
   assert.match(defaults, /4,000/);
   assert.match(defaults, /094-293-5296/);
   assert.match(defaults, /Sddpapartment/);
+  assert.match(defaults, /SDDP\.Apartment/);
   assert.match(page, /publicGallery/);
   assert.match(page, /Chat on WhatsApp/);
+  assert.match(page, /Chat on Line/);
+  assert.match(page, /line-official/);
   assert.match(page, /Stay options/);
   assert.match(inquiryApi, /sddp\.inquiry\.created/);
   assert.match(inquiryApi, /room_unavailable/);
   assert.match(inquiryApi, /room_number/);
   assert.match(inquiryApi, /pipeline/);
   assert.match(page, /Choose an available room/);
-  assert.match(page, /disabled=\{room\.status !== "available"\}/);
+  assert.match(page, /occupiedPick/);
+  assert.match(page, /pickRoom/);
+  assert.match(page, /catalogBoard/);
+  assert.match(page, /status !== "available"/);
   assert.match(residentApi, /encryptPassport/);
   assert.match(residentApi, /consentConfirmed/);
   assert.match(residentApi, /fromInquiryId/);
-  assert.match(roomsApi, /SELECT DISTINCT room_number/);
-  assert.doesNotMatch(roomsApi, /full_name|passport|email|phone/);
+  assert.match(occupancy, /SELECT DISTINCT room_number/);
+  assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
+  assert.match(roomsApi, /source: "database"/);
+  assert.match(inquiryApi, /room_required/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS residents/);
   assert.match(admin, /Website content/);
   assert.match(admin, /Resident records/);

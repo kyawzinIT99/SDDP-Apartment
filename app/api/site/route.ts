@@ -8,6 +8,7 @@ export async function GET() {
     const row = await DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
     const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
     if (saved.mapUrl === "https://goo.gl/maps/w8Dt91axwKPt9xgRA") saved.mapUrl = defaultSiteSettings.mapUrl;
+    if (!saved.lineId || saved.lineId.toLowerCase() === "sddpapartment") saved.lineId = defaultSiteSettings.lineId;
     return Response.json({ ...defaultSiteSettings, ...saved, copy: saved.copy ?? {} });
   } catch { return Response.json(defaultSiteSettings); }
 }

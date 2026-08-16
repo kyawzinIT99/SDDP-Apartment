@@ -1,9 +1,9 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
-import { bindings, ensureSchema } from "../../lib/storage";
+import { occupiedRoomSet } from "../../lib/occupancy";
 import { normalizeRoomNumber, roomCatalog } from "../../lib/rooms";
+import { bindings, ensureSchema } from "../../lib/storage";
 
 type InquiryInput = { name?: string; phone?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
-type OccupiedRoomRow = { roomNumber: string };
 type InquiryPatch = { id?: string; status?: string; notes?: string };
 const pipeline = ["new", "contacted", "booked", "lost", "converted"] as const;
 
@@ -11,11 +11,10 @@ export async function POST(request: Request) {
   const input = await request.json() as InquiryInput;
   if (!input.name?.trim() || !input.phone?.trim()) return Response.json({ error: "Name and contact are required" }, { status: 400 });
   const roomNumber = normalizeRoomNumber(input.roomNumber ?? "");
+  if (!roomNumber) return Response.json({ error: "Please select an available room", code: "room_required" }, { status: 400 });
   if (!roomCatalog.some((room) => room.roomNumber === roomNumber)) return Response.json({ error: "Please select a valid room", code: "invalid_room" }, { status: 400 });
   const runtime = bindings(); await ensureSchema(runtime.DB!);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const occupiedRows = await runtime.DB!.prepare("SELECT room_number AS roomNumber FROM residents WHERE status = 'active' AND TRIM(room_number) <> '' AND (check_in_date IS NULL OR check_in_date = '' OR check_in_date <= ?) AND (check_out_date IS NULL OR check_out_date = '' OR check_out_date >= ?)").bind(today, today).all<OccupiedRoomRow>();
-  const occupied = new Set((occupiedRows.results ?? []).map((row) => normalizeRoomNumber(row.roomNumber)).filter(Boolean));
+  const occupied = await occupiedRoomSet(runtime.DB!);
   const availableRooms = roomCatalog.map((room) => room.roomNumber).filter((room) => !occupied.has(room));
   if (occupied.has(roomNumber)) return Response.json({ error: "That room is now occupied. Please choose an available room.", code: "room_unavailable", roomNumber, availableRooms }, { status: 409 });
   const now = Date.now();

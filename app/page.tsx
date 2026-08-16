@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
-import { defaultSiteSettings, publicGallery, type SiteSettings } from "./lib/site-defaults";
+import { defaultSiteSettings, lineChatUrl, officialLineId, publicGallery, type SiteSettings } from "./lib/site-defaults";
+import { catalogBoard, type PublicRoom } from "./lib/rooms";
 
 type Language = "en" | "th" | "my";
-type RoomAvailability = { roomNumber: string; floor: string; status: "available" | "occupied" | "unknown" };
+type RoomAvailability = PublicRoom;
 
 const words = {
   en: {
@@ -32,10 +33,10 @@ const words = {
     gallery: "A real look inside",
     gallerySub: "Recent photos from the official SDDP Apartment Facebook page.",
     inquiryTitle: "Tell us what you need.", inquirySub: "Share your dates and preferred contact. The team will confirm availability directly.",
-    name: "Your name", contact: "Phone / WhatsApp / Line", stay: "Stay type", room: "Preferred room", chooseRoom: "Choose an available room", noRooms: "No rooms are currently available", arrival: "Expected arrival", note: "Anything we should know?", send: "Send inquiry", sent: "Thank you — your inquiry is with the SDDP team.", roomChanged: "is now occupied. We switched your selection to", chooseAnother: "is now occupied. Please choose another available room.",
+    name: "Your name", contact: "Phone / WhatsApp / Line", stay: "Stay type", room: "Preferred room", chooseRoom: "Choose an available room", noRooms: "No rooms are currently available", arrival: "Expected arrival", note: "Anything we should know?", send: "Send inquiry", sent: "Thank you — your inquiry is with the SDDP team.", roomChanged: "is now occupied. We switched your selection to", chooseAnother: "is now occupied. Please choose another available room.", occupiedPick: "This room is occupied. Choose an available room to send an inquiry.", needAvailable: "Please select an available room before sending your inquiry.", tapAvailable: "Tap an available room to continue",
     locationTitle: "Close to Chiang Mai. Easy to settle in.", directions: "Open in Google Maps", contactUs: "Contact SDDP",
     amenitiesLabel: "Amenities", galleryLabel: "Gallery", inquiryLabel: "Inquiry", locationLabel: "Location", viewFacebook: "View Facebook", showAll: "View all photos", showLess: "Show less", flexible: "Flexible living", monthlyOption: "Monthly", dailyOption: "Daily", footerLine: "Daily & monthly rooms · Chiang Mai", sending: "Sending…", formError: "Please contact us directly while we reconnect the form.", adminLabel: "Admin",
-    packagesLabel: "Stay options", packagesTitle: "Daily or monthly. Same clean rooms.", packagesSub: "Prices are in Thai baht. The team confirms the room before you travel.", dailyStay: "Daily stay", monthlyStay: "Monthly stay", deposit: "Deposit", offer: "Current offer", chatWhatsApp: "Chat on WhatsApp", whoLabel: "Who stays here", whoTitle: "A simple base near Chiang Mai.", whoOneTitle: "Work and study", whoOne: "Quiet monthly rooms in San Kamphaeng, without city-centre prices.", whoTwoTitle: "Short visits", whoTwo: "Daily rooms when you need a clean stay without a long contract.", whoThreeTitle: "Easy arrival", whoThree: "TM30 support, Wi-Fi, parking and keycard access are ready when you check in.",
+    packagesLabel: "Stay options", packagesTitle: "Daily or monthly. Same clean rooms.", packagesSub: "Prices are in Thai baht. The team confirms the room before you travel.", dailyStay: "Daily stay", monthlyStay: "Monthly stay", deposit: "Deposit", offer: "Current offer", chatWhatsApp: "Chat on WhatsApp", chatLine: "Chat on Line", whoLabel: "Who stays here", whoTitle: "A simple base near Chiang Mai.", whoOneTitle: "Work and study", whoOne: "Quiet monthly rooms in San Kamphaeng, without city-centre prices.", whoTwoTitle: "Short visits", whoTwo: "Daily rooms when you need a clean stay without a long contract.", whoThreeTitle: "Easy arrival", whoThree: "TM30 support, Wi-Fi, parking and keycard access are ready when you check in.",
   },
   th: {
     nav: ["ห้องพัก", "สิ่งอำนวยความสะดวก", "ห้องว่าง", "แกลเลอรี", "สอบถาม", "ที่ตั้ง"],
@@ -62,10 +63,10 @@ const words = {
     gallery: "ชมบรรยากาศจริง",
     gallerySub: "ภาพล่าสุดจากเพจ Facebook ทางการของ SDDP Apartment",
     inquiryTitle: "บอกเราเกี่ยวกับการเข้าพักของคุณ", inquirySub: "แจ้งวันที่และช่องทางติดต่อ ทีมงานจะยืนยันห้องว่างให้โดยตรง",
-    name: "ชื่อของคุณ", contact: "โทรศัพท์ / WhatsApp / Line", stay: "ประเภทการเข้าพัก", room: "ห้องที่ต้องการ", chooseRoom: "เลือกห้องว่าง", noRooms: "ขณะนี้ไม่มีห้องว่าง", arrival: "วันที่คาดว่าจะเข้าพัก", note: "รายละเอียดเพิ่มเติม", send: "ส่งคำถาม", sent: "ขอบคุณ ทีม SDDP ได้รับคำถามของคุณแล้ว", roomChanged: "มีผู้เข้าพักแล้ว เราเปลี่ยนห้องที่เลือกเป็น", chooseAnother: "มีผู้เข้าพักแล้ว กรุณาเลือกห้องว่างอื่น",
+    name: "ชื่อของคุณ", contact: "โทรศัพท์ / WhatsApp / Line", stay: "ประเภทการเข้าพัก", room: "ห้องที่ต้องการ", chooseRoom: "เลือกห้องว่าง", noRooms: "ขณะนี้ไม่มีห้องว่าง", arrival: "วันที่คาดว่าจะเข้าพัก", note: "รายละเอียดเพิ่มเติม", send: "ส่งคำถาม", sent: "ขอบคุณ ทีม SDDP ได้รับคำถามของคุณแล้ว", roomChanged: "มีผู้เข้าพักแล้ว เราเปลี่ยนห้องที่เลือกเป็น", chooseAnother: "มีผู้เข้าพักแล้ว กรุณาเลือกห้องว่างอื่น", occupiedPick: "ห้องนี้มีผู้เข้าพักแล้ว กรุณาเลือกห้องว่างเพื่อส่งคำถาม", needAvailable: "กรุณาเลือกห้องว่างก่อนส่งคำถาม", tapAvailable: "แตะห้องว่างเพื่อดำเนินการต่อ",
     locationTitle: "ใกล้เมืองเชียงใหม่ เริ่มต้นการเข้าพักได้ง่าย", directions: "เปิดใน Google Maps", contactUs: "ติดต่อ SDDP",
     amenitiesLabel: "สิ่งอำนวยความสะดวก", galleryLabel: "แกลเลอรี", inquiryLabel: "สอบถามห้องพัก", locationLabel: "ที่ตั้ง", viewFacebook: "ดู Facebook", showAll: "ดูรูปทั้งหมด", showLess: "แสดงน้อยลง", flexible: "พักได้อย่างยืดหยุ่น", monthlyOption: "รายเดือน", dailyOption: "รายวัน", footerLine: "ห้องพักรายวันและรายเดือน · เชียงใหม่", sending: "กำลังส่ง…", formError: "กรุณาติดต่อเราโดยตรงระหว่างที่กำลังเชื่อมต่อแบบฟอร์มอีกครั้ง", adminLabel: "ผู้ดูแล",
-    packagesLabel: "ตัวเลือกการเข้าพัก", packagesTitle: "พักรายวันหรือรายเดือน ห้องสะอาดเหมือนกัน", packagesSub: "ราคาเป็นบาท ทีมงานจะยืนยันห้องก่อนคุณเดินทาง", dailyStay: "พักรายวัน", monthlyStay: "พักรายเดือน", deposit: "เงินมัดจำ", offer: "โปรโมชันปัจจุบัน", chatWhatsApp: "คุยทาง WhatsApp", whoLabel: "เหมาะกับใคร", whoTitle: "ฐานที่พักใกล้เชียงใหม่ ที่เริ่มต้นได้ง่าย", whoOneTitle: "ทำงานและเรียน", whoOne: "ห้องรายเดือนเงียบในสันกำแพง ไม่ต้องจ่ายราคาใจกลางเมือง", whoTwoTitle: "เข้าพักระยะสั้น", whoTwo: "ห้องรายวันเมื่อต้องการที่พักสะอาดโดยไม่ต้องทำสัญญายาว", whoThreeTitle: "เดินทางมาถึงได้ง่าย", whoThree: "มีบริการ TM30, Wi-Fi, ที่จอดรถ และคีย์การ์ดพร้อมเมื่อเช็คอิน",
+    packagesLabel: "ตัวเลือกการเข้าพัก", packagesTitle: "พักรายวันหรือรายเดือน ห้องสะอาดเหมือนกัน", packagesSub: "ราคาเป็นบาท ทีมงานจะยืนยันห้องก่อนคุณเดินทาง", dailyStay: "พักรายวัน", monthlyStay: "พักรายเดือน", deposit: "เงินมัดจำ", offer: "โปรโมชันปัจจุบัน", chatWhatsApp: "คุยทาง WhatsApp", chatLine: "คุยทาง Line", whoLabel: "เหมาะกับใคร", whoTitle: "ฐานที่พักใกล้เชียงใหม่ ที่เริ่มต้นได้ง่าย", whoOneTitle: "ทำงานและเรียน", whoOne: "ห้องรายเดือนเงียบในสันกำแพง ไม่ต้องจ่ายราคาใจกลางเมือง", whoTwoTitle: "เข้าพักระยะสั้น", whoTwo: "ห้องรายวันเมื่อต้องการที่พักสะอาดโดยไม่ต้องทำสัญญายาว", whoThreeTitle: "เดินทางมาถึงได้ง่าย", whoThree: "มีบริการ TM30, Wi-Fi, ที่จอดรถ และคีย์การ์ดพร้อมเมื่อเช็คอิน",
   },
   my: {
     nav: ["အခန်းများ", "ဝန်ဆောင်မှုများ", "အခန်းလွတ်", "ဓာတ်ပုံများ", "မေးမြန်းရန်", "တည်နေရာ"],
@@ -92,10 +93,10 @@ const words = {
     gallery: "အတွင်းပိုင်းကို အမှန်တကယ်ကြည့်ပါ",
     gallerySub: "SDDP Apartment တရားဝင် Facebook စာမျက်နှာမှ နောက်ဆုံးဓာတ်ပုံများ။",
     inquiryTitle: "သင်လိုအပ်တာ ပြောပြပါ။", inquirySub: "တည်းခိုမည့်ရက်နှင့် ဆက်သွယ်လိုသည့်နည်းလမ်းကို မျှဝေပါ။ အဖွဲ့က အခန်းလွတ်ကို အတည်ပြုပေးပါမည်။",
-    name: "သင့်အမည်", contact: "ဖုန်း / WhatsApp / Line", stay: "တည်းခိုမှုအမျိုးအစား", room: "နှစ်သက်ရာအခန်း", chooseRoom: "လွတ်နေသောအခန်း ရွေးပါ", noRooms: "လက်ရှိ အခန်းလွတ်မရှိပါ", arrival: "ရောက်ရှိမည့်ရက်", note: "ထပ်မံသိရှိရန်", send: "မေးမြန်းချက် ပို့ရန်", sent: "ကျေးဇူးတင်ပါသည် — SDDP အဖွဲ့ထံ ရောက်ရှိပါပြီ။", roomChanged: "တွင် နေထိုင်သူရှိသွားပါပြီ။ သင့်ရွေးချယ်မှုကို ပြောင်းပေးထားသည်", chooseAnother: "တွင် နေထိုင်သူရှိသွားပါပြီ။ အခြားအခန်းလွတ်ကို ရွေးပါ။",
+    name: "သင့်အမည်", contact: "ဖုန်း / WhatsApp / Line", stay: "တည်းခိုမှုအမျိုးအစား", room: "နှစ်သက်ရာအခန်း", chooseRoom: "လွတ်နေသောအခန်း ရွေးပါ", noRooms: "လက်ရှိ အခန်းလွတ်မရှိပါ", arrival: "ရောက်ရှိမည့်ရက်", note: "ထပ်မံသိရှိရန်", send: "မေးမြန်းချက် ပို့ရန်", sent: "ကျေးဇူးတင်ပါသည် — SDDP အဖွဲ့ထံ ရောက်ရှိပါပြီ။", roomChanged: "တွင် နေထိုင်သူရှိသွားပါပြီ။ သင့်ရွေးချယ်မှုကို ပြောင်းပေးထားသည်", chooseAnother: "တွင် နေထိုင်သူရှိသွားပါပြီ။ အခြားအခန်းလွတ်ကို ရွေးပါ။", occupiedPick: "ဤအခန်းတွင် နေထိုင်သူရှိပြီး မေးမြန်း၍မရပါ။ အခန်းလွတ်ကို ရွေးပါ။", needAvailable: "မေးမြန်းချက် မပို့မီ အခန်းလွတ်ကို ရွေးပါ။", tapAvailable: "ဆက်လုပ်ရန် အခန်းလွတ်ကို နှိပ်ပါ",
     locationTitle: "ချင်းမိုင်မြို့အနီး အလွယ်တကူ နေထိုင်နိုင်ပါသည်။", directions: "Google Maps တွင်ဖွင့်ရန်", contactUs: "SDDP ကို ဆက်သွယ်ရန်",
     amenitiesLabel: "ဝန်ဆောင်မှုများ", galleryLabel: "ဓာတ်ပုံများ", inquiryLabel: "မေးမြန်းရန်", locationLabel: "တည်နေရာ", viewFacebook: "Facebook တွင်ကြည့်ရန်", showAll: "ဓာတ်ပုံအားလုံးကြည့်ရန်", showLess: "လျှော့ပြရန်", flexible: "လိုက်လျောညီထွေ တည်းခိုမှု", monthlyOption: "လစဉ်", dailyOption: "နေ့စဉ်", footerLine: "နေ့စဉ်နှင့် လစဉ်အခန်းများ · ချင်းမိုင်", sending: "ပို့နေသည်…", formError: "ဖောင်ကို ပြန်လည်ချိတ်ဆက်နေစဉ် ကျေးဇူးပြု၍ ကျွန်ုပ်တို့ကို တိုက်ရိုက်ဆက်သွယ်ပါ။", adminLabel: "စီမံခန့်ခွဲမှု",
-    packagesLabel: "တည်းခိုမှု ရွေးချယ်စရာ", packagesTitle: "နေ့စဉ် သို့မဟုတ် လစဉ်။ အခန်းသန့်ရှင်းမှု အတူတူပါ။", packagesSub: "ဈေးနှုန်းမှာ ထိုင်းဘတ်ဖြစ်သည်။ ခရီးမထွက်မီ အဖွဲ့က အခန်းကို အတည်ပြုပေးပါမည်။", dailyStay: "နေ့စဉ် တည်းခိုမှု", monthlyStay: "လစဉ် တည်းခိုမှု", deposit: "အာမခံငွေ", offer: "လက်ရှိ ကမ်းလှမ်းချက်", chatWhatsApp: "WhatsApp မှ စကားပြောရန်", whoLabel: "မည်သူများ တည်းခိုသနည်း", whoTitle: "ချင်းမိုင်အနီး အဆင်ပြေသော နေရာ။", whoOneTitle: "အလုပ်နှင့် ပညာသင်", whoOne: "San Kamphaeng တွင် တိတ်ဆိတ်ပြီး ဈေးသက်သာသော လစဉ်အခန်းများ။", whoTwoTitle: "ခဏတာ လာရောက်မှု", whoTwo: "စာချုပ်ရှည်မလိုဘဲ သန့်ရှင်းစွာ တည်းခိုလိုသော နေ့စဉ်အခန်းများ။", whoThreeTitle: "ရောက်ရှိရ လွယ်ကူမှု", whoThree: "TM30 အကူအညီ၊ Wi-Fi၊ ပါကင်နှင့် ကီးကတ် ဝင်ပေါက်များ အဆင်သင့်ရှိသည်။",
+    packagesLabel: "တည်းခိုမှု ရွေးချယ်စရာ", packagesTitle: "နေ့စဉ် သို့မဟုတ် လစဉ်။ အခန်းသန့်ရှင်းမှု အတူတူပါ။", packagesSub: "ဈေးနှုန်းမှာ ထိုင်းဘတ်ဖြစ်သည်။ ခရီးမထွက်မီ အဖွဲ့က အခန်းကို အတည်ပြုပေးပါမည်။", dailyStay: "နေ့စဉ် တည်းခိုမှု", monthlyStay: "လစဉ် တည်းခိုမှု", deposit: "အာမခံငွေ", offer: "လက်ရှိ ကမ်းလှမ်းချက်", chatWhatsApp: "WhatsApp မှ စကားပြောရန်", chatLine: "Line မှ စကားပြောရန်", whoLabel: "မည်သူများ တည်းခိုသနည်း", whoTitle: "ချင်းမိုင်အနီး အဆင်ပြေသော နေရာ။", whoOneTitle: "အလုပ်နှင့် ပညာသင်", whoOne: "San Kamphaeng တွင် တိတ်ဆိတ်ပြီး ဈေးသက်သာသော လစဉ်အခန်းများ။", whoTwoTitle: "ခဏတာ လာရောက်မှု", whoTwo: "စာချုပ်ရှည်မလိုဘဲ သန့်ရှင်းစွာ တည်းခိုလိုသော နေ့စဉ်အခန်းများ။", whoThreeTitle: "ရောက်ရှိရ လွယ်ကူမှု", whoThree: "TM30 အကူအညီ၊ Wi-Fi၊ ပါကင်နှင့် ကီးကတ် ဝင်ပေါက်များ အဆင်သင့်ရှိသည်။",
   },
 } satisfies Record<Language, Record<string, string | string[]>>;
 
@@ -103,39 +104,68 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>("en");
   const [settings, setSettings] = useState<SiteSettings>(defaultSiteSettings);
   const [showGallery, setShowGallery] = useState(false);
-  const [availability, setAvailability] = useState<{ rooms: RoomAvailability[]; stale?: boolean }>({ rooms: [] });
+  const [availability, setAvailability] = useState<{ rooms: RoomAvailability[]; stale?: boolean; source?: string }>({ rooms: catalogBoard(), stale: true, source: "catalog" });
   const [selectedRoom, setSelectedRoom] = useState("");
   const [formStatus, setFormStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [formNotice, setFormNotice] = useState("");
   const t = { ...words[language], ...(settings.copy[language] ?? {}) };
   const nav = words[language].nav;
+  const lineId = officialLineId(settings.lineId);
+  const lineHref = lineChatUrl(settings.lineId);
   const visibleGallery = publicGallery.filter((image) => !settings.galleryHidden.includes(image));
   const roomsByFloor = availability.rooms.reduce<Record<string, RoomAvailability[]>>((groups, room) => { (groups[room.floor] ??= []).push(room); return groups; }, {});
-  const availableCount = availability.rooms.filter((room) => room.status === "available").length;
+  const availableRooms = availability.rooms.filter((room) => room.status === "available");
+  const availableCount = availableRooms.length;
+  const selectedIsAvailable = availableRooms.some((room) => room.roomNumber === selectedRoom);
   const theme = { "--yellow": settings.accentColor, "--red": settings.actionColor, "--cream": settings.backgroundColor, "--ink": settings.textColor } as CSSProperties;
 
   useEffect(() => {
     fetch("/api/site").then((response) => response.ok ? response.json() : null).then((data) => data && setSettings(data)).catch(() => undefined);
     let active = true;
-    const loadAvailability = () => fetch("/api/rooms").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data) setAvailability(data); }).catch(() => undefined);
+    const loadAvailability = () => fetch("/api/rooms").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.rooms) setAvailability(data); }).catch(() => undefined);
     loadAvailability();
     const timer = window.setInterval(loadAvailability, 30_000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
+  useEffect(() => {
+    if (!selectedRoom) return;
+    const current = availability.rooms.find((room) => room.roomNumber === selectedRoom);
+    if (current && current.status !== "available") {
+      setSelectedRoom("");
+      setFormNotice(`${t.room} ${current.roomNumber} ${t.chooseAnother}`);
+    }
+  }, [availability, selectedRoom, t.chooseAnother, t.room]);
+
+  function pickRoom(room: RoomAvailability) {
+    if (room.status !== "available") {
+      setFormNotice(t.occupiedPick);
+      return;
+    }
+    setSelectedRoom(room.roomNumber);
+    setFormNotice("");
+    document.getElementById("inquiry")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   async function submitInquiry(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setFormStatus("sending"); setFormNotice("");
+    event.preventDefault();
+    const chosen = availability.rooms.find((room) => room.roomNumber === selectedRoom);
+    if (!chosen || chosen.status !== "available") {
+      setFormNotice(t.needAvailable);
+      setFormStatus("idle");
+      return;
+    }
+    setFormStatus("sending"); setFormNotice("");
     const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
       const response = await fetch("/api/inquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...data, roomNumber: selectedRoom, locale: language }) });
       const result = await response.json();
       if (response.status === 409 && result.code === "room_unavailable") {
         const refreshed = await fetch("/api/rooms").then((value) => value.json());
-        setAvailability(refreshed);
-        const nextRoom = (result.availableRooms as string[] | undefined)?.[0] ?? "";
-        setSelectedRoom(nextRoom);
-        const notice = nextRoom ? `${t.room} ${result.roomNumber} ${t.roomChanged} ${t.room} ${nextRoom}.` : `${t.room} ${result.roomNumber} ${t.chooseAnother}`;
-        setFormNotice(notice); setFormStatus("idle"); window.alert(notice); return;
+        if (refreshed?.rooms) setAvailability(refreshed);
+        setSelectedRoom("");
+        const notice = `${t.room} ${result.roomNumber} ${t.chooseAnother}`;
+        setFormNotice(notice); setFormStatus("idle"); return;
       }
       if (!response.ok) throw new Error();
       setFormStatus("sent"); setSelectedRoom(""); event.currentTarget.reset();
@@ -221,11 +251,12 @@ export default function Home() {
       <section className="availability-section" id="availability">
         <div className="availability-head">
           <div><span>04 / {t.availabilityLabel}</span><h2>{t.availabilityTitle}</h2><p>{t.availabilitySub}</p></div>
-          <div className="availability-count"><b>{availableCount}</b><span>{t.availableNow}</span><small><i />{t.autoUpdate}</small></div>
+          <div className="availability-count"><b>{availableCount}</b><span>{t.availableNow}</span><small><i />{availability.source === "database" ? t.autoUpdate : t.unknown}</small></div>
         </div>
         <div className="status-legend"><span><i className="available" />{t.available}</span><span><i className="occupied" />{t.occupied}</span>{availability.stale && <span><i className="unknown" />{t.unknown}</span>}</div>
+        <p className="room-hint">{t.tapAvailable}</p>
         <div className="floor-list">
-          {Object.entries(roomsByFloor).map(([floor, rooms]) => <section className="floor-card" key={floor}><header><span>{t.floor}</span><b>{floor}</b><small>{rooms.filter((room) => room.status === "available").length}/{rooms.length} {t.available}</small></header><div className="room-grid">{rooms.map((room) => <article key={room.roomNumber} className={`room-status ${room.status}`}><b>{room.roomNumber}</b><span><i />{room.status === "available" ? t.available : room.status === "occupied" ? t.occupied : t.unknown}</span></article>)}</div></section>)}
+          {Object.entries(roomsByFloor).map(([floor, rooms]) => <section className="floor-card" key={floor}><header><span>{t.floor}</span><b>{floor}</b><small>{rooms.filter((room) => room.status === "available").length}/{rooms.length} {t.available}</small></header><div className="room-grid">{rooms.map((room) => <button type="button" key={room.roomNumber} className={`room-status ${room.status}${selectedRoom === room.roomNumber ? " selected" : ""}`} aria-disabled={room.status !== "available"} onClick={() => pickRoom(room)}><b>{room.roomNumber}</b><span><i />{room.status === "available" ? t.available : room.status === "occupied" ? t.occupied : t.unknown}</span></button>)}</div></section>)}
         </div>
       </section>
 
@@ -236,21 +267,24 @@ export default function Home() {
       </section>
 
       <section className="inquiry-section" id="inquiry">
-        <div className="inquiry-copy"><span>06 / {t.inquiryLabel}</span><h2>{t.inquiryTitle}</h2><p>{t.inquirySub}</p><div className="direct-contact"><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a><a href={`https://line.me/ti/p/~${settings.lineId}`} target="_blank" rel="noreferrer">Line: {settings.lineId}</a></div></div>
+        <div className="inquiry-copy"><span>06 / {t.inquiryLabel}</span><h2>{t.inquiryTitle}</h2><p>{t.inquirySub}</p><div className="direct-contact"><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a><a className="line-official" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="SDDP Apartment" /><span><b>LINE</b><small>{lineId}</small></span></a></div></div>
         <form onSubmit={submitInquiry}>
           <label>{t.name}<input name="name" required autoComplete="name" /></label>
           <label>{t.contact}<input name="phone" required autoComplete="tel" /></label>
-          <div className="form-row"><label>{t.stay}<select name="stayType"><option value="monthly">{t.monthlyOption}</option><option value="daily">{t.dailyOption}</option></select></label><label>{t.room}<select name="roomNumber" required value={selectedRoom} onChange={(event) => { setSelectedRoom(event.target.value); setFormNotice(""); }}><option value="">{availableCount ? t.chooseRoom : t.noRooms}</option>{availability.rooms.map((room) => <option key={room.roomNumber} value={room.roomNumber} disabled={room.status !== "available"}>{room.roomNumber} — {room.status === "available" ? t.available : room.status === "occupied" ? t.occupied : t.unknown}</option>)}</select></label></div>
+          <div className="form-row"><label>{t.stay}<select name="stayType"><option value="monthly">{t.monthlyOption}</option><option value="daily">{t.dailyOption}</option></select></label><label>{t.room}<select name="roomNumber" required value={selectedRoom} onChange={(event) => { const next = availability.rooms.find((room) => room.roomNumber === event.target.value); if (next && next.status !== "available") { setFormNotice(t.occupiedPick); setSelectedRoom(""); return; } setSelectedRoom(event.target.value); setFormNotice(""); }}><option value="">{availableCount ? t.chooseRoom : t.noRooms}</option>{availableRooms.map((room) => <option key={room.roomNumber} value={room.roomNumber}>{room.roomNumber} — {t.available}</option>)}</select></label></div>
           <label>{t.arrival}<input name="arrivalDate" type="date" /></label>
           <label>{t.note}<textarea name="message" rows={3} /></label>
-          <button className="form-submit" disabled={formStatus === "sending" || availableCount === 0}>{formStatus === "sending" ? t.sending : t.send}<b>↗</b></button>
+          <button className="form-submit" disabled={formStatus === "sending" || !selectedIsAvailable}>{formStatus === "sending" ? t.sending : t.send}<b>↗</b></button>
           <div aria-live="polite">{formNotice && <p className="form-message">{formNotice}</p>}{formStatus === "sent" && <p className="form-message success">{t.sent}</p>}{formStatus === "error" && <p className="form-message">{t.formError}</p>}</div>
         </form>
       </section>
 
       <section className="location-section" id="location"><div><span>07 / {t.locationLabel}</span><h2>{t.locationTitle}</h2><p>{settings.address}</p><a href={settings.mapUrl} target="_blank" rel="noreferrer">{t.directions} ↗</a></div><div className="map-frame"><iframe src={settings.mapEmbedUrl} title="SDDP Apartment on Google Maps" loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div></section>
-      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
-      <a className="wa-float" href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">{t.chatWhatsApp}</a>
+      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a className="line-official compact" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="" /><span>LINE {lineId}</span></a><a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
+      <div className="chat-floats">
+        <a className="line-float" href={lineHref} target="_blank" rel="noreferrer"><img src="/brand-logo.jpg" alt="" /><span>{t.chatLine}<b>{lineId}</b></span></a>
+        <a className="wa-float" href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">{t.chatWhatsApp}</a>
+      </div>
     </main>
   );
 }
