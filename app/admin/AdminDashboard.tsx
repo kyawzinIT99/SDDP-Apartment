@@ -5,7 +5,7 @@ import { defaultSiteSettings, publicGallery, type Locale, type SiteSettings } fr
 import { TypedDateField } from "../lib/typed-date";
 import InvoiceDesk from "./InvoiceDesk";
 
-type ResidentInvoice = { id: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string };
+type ResidentInvoice = { id: string; bookNumber: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string };
 type Inquiry = { id: string; name: string; phone: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
@@ -174,11 +174,76 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   async function loadResidentInvoices(resident: Resident) {
     if (residentInvoices[resident.id]) { setHistoryOpen(historyOpen === resident.id ? null : resident.id); return; }
     const data = await fetch(`/api/invoices?name=${encodeURIComponent(resident.fullName)}`).then((r) => r.ok ? r.json() : { invoices: [] });
-    const rows: ResidentInvoice[] = (data.invoices ?? []).map((inv: { id: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string }) => ({
-      id: inv.id, invoiceNumber: inv.invoiceNumber, billingMonth: inv.billingMonth, billingYear: inv.billingYear, total: inv.total, issueDate: inv.issueDate,
+    const rows: ResidentInvoice[] = (data.invoices ?? []).map((inv: { id: string; bookNumber: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string }) => ({
+      id: inv.id, bookNumber: inv.bookNumber, invoiceNumber: inv.invoiceNumber, billingMonth: inv.billingMonth, billingYear: inv.billingYear, total: inv.total, issueDate: inv.issueDate,
     }));
     setResidentInvoices((prev) => ({ ...prev, [resident.id]: rows }));
     setHistoryOpen(resident.id);
+  }
+
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const checkouts = residents.filter((r) => r.status === "checked_out");
+
+  async function loadAllInvoices(): Promise<Record<string, ResidentInvoice[]>> {
+    const cache: Record<string, ResidentInvoice[]> = { ...residentInvoices };
+    await Promise.all(checkouts.filter((r) => !cache[r.id]).map(async (r) => {
+      const data = await fetch(`/api/invoices?name=${encodeURIComponent(r.fullName)}`).then((res) => res.ok ? res.json() : { invoices: [] });
+      cache[r.id] = (data.invoices ?? []).map((inv: { id: string; bookNumber: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string }) => ({
+        id: inv.id, bookNumber: inv.bookNumber, invoiceNumber: inv.invoiceNumber, billingMonth: inv.billingMonth, billingYear: inv.billingYear, total: inv.total, issueDate: inv.issueDate,
+      }));
+    }));
+    setResidentInvoices(cache);
+    return cache;
+  }
+
+  async function exportHistoryCSV() {
+    setStatus("Preparing Excel export…");
+    const allInvoices = await loadAllInvoices();
+    const header = ["Name", "Nationality", "Room", "Passport Last 4", "Check-in", "Check-out", "Book No", "Invoice No (Tax ID)", "Month", "Year", "Issue Date", "Total (THB)"];
+    const body: string[][] = [];
+    for (const r of checkouts) {
+      const invs = allInvoices[r.id] ?? [];
+      if (invs.length === 0) {
+        body.push([r.fullName, r.nationality || "", r.roomNumber || "", r.passportLast4 || "", r.checkInDate || "", r.checkOutDate || "", "", "", "", "", "", ""]);
+      } else {
+        for (const inv of invs) {
+          body.push([r.fullName, r.nationality || "", r.roomNumber || "", r.passportLast4 || "", r.checkInDate || "", r.checkOutDate || "", inv.bookNumber, inv.invoiceNumber, monthNames[(inv.billingMonth - 1) % 12], inv.billingYear, inv.issueDate, String(inv.total)]);
+        }
+      }
+    }
+    const csv = [header, ...body].map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `sddp-past-residents-${new Date().toISOString().slice(0, 10)}.csv` });
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus("Excel file downloaded");
+  }
+
+  async function exportHistoryPDF() {
+    setStatus("Preparing PDF…");
+    const allInvoices = await loadAllInvoices();
+    const rows = checkouts.flatMap((r) => {
+      const invs = allInvoices[r.id] ?? [];
+      if (invs.length === 0) return [`<tr><td>${r.fullName}</td><td>${r.nationality || "—"}</td><td>${r.roomNumber || "—"}</td><td>${r.passportLast4 ? "••••" + r.passportLast4 : "—"}</td><td>${r.checkInDate || "—"}</td><td>${r.checkOutDate || "—"}</td><td colspan="3">—</td><td>—</td></tr>`];
+      return invs.map((inv) => `<tr><td>${r.fullName}</td><td>${r.nationality || "—"}</td><td>${r.roomNumber || "—"}</td><td>${r.passportLast4 ? "••••" + r.passportLast4 : "—"}</td><td>${r.checkInDate || "—"}</td><td>${r.checkOutDate || "—"}</td><td>${inv.bookNumber}</td><td>${inv.invoiceNumber}</td><td>${monthNames[(inv.billingMonth - 1) % 12]} ${inv.billingYear}</td><td style="text-align:right">฿${inv.total.toLocaleString()}</td></tr>`);
+    });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>SDDP Past Residents</title><style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#1b1c1d;margin:24px}
+      h1{font-size:18px;margin:0 0 4px}p{margin:0 0 16px;color:#777}
+      table{border-collapse:collapse;width:100%}
+      th{background:#1b1c1d;color:#fff;padding:6px 8px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+      td{padding:5px 8px;border-bottom:1px solid #e8e5df;vertical-align:top}
+      tr:last-child td{border-bottom:none}
+      @media print{body{margin:0}h1{font-size:14px}}
+    </style></head><body>
+      <h1>SDDP Apartment — Past Residents Report</h1>
+      <p>Generated ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })} · ${checkouts.length} resident${checkouts.length !== 1 ? "s" : ""}</p>
+      <table><thead><tr><th>Name</th><th>Nationality</th><th>Room</th><th>Passport</th><th>Check-in</th><th>Check-out</th><th>Book No</th><th>Invoice No</th><th>Period</th><th>Total</th></tr></thead>
+      <tbody>${rows.join("")}</tbody></table>
+    </body></html>`;
+    const win = window.open("", "_blank", "width=1100,height=700");
+    if (win) { win.document.write(html); win.document.close(); win.focus(); win.print(); }
+    setStatus("PDF print dialog opened");
   }
 
   return <main className="admin-shell">
@@ -272,14 +337,18 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} seed={invoiceSeed} onStatus={setStatus} />}
 
       {tab === "history" && <section className="editor-card history-section">
-        <div className="card-head"><div><span>PAST RESIDENTS</span><h2>Checked-out guest records</h2><p>Full profile and every invoice issued during their stay. Tap a name to expand the invoice history.</p></div></div>
+        <div className="card-head"><div><span>PAST RESIDENTS</span><h2>Checked-out guest records</h2><p>Full profile and every invoice issued during their stay. Tap a name to expand the invoice history.</p></div>
+          {checkouts.length > 0 && <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button type="button" className="resident-action" onClick={exportHistoryCSV}>⬇ Excel</button>
+            <button type="button" className="resident-action" onClick={exportHistoryPDF}>⬇ PDF</button>
+          </div>}
+        </div>
         {residents.filter((r) => r.status === "checked_out").length === 0
           ? <div className="empty-state"><b>No checked-out residents yet</b><p>When you check out an active resident, their record appears here with all invoices attached.</p></div>
           : residents.filter((r) => r.status === "checked_out").map((r) => {
             const isOpen = historyOpen === r.id;
             const invs = residentInvoices[r.id] ?? [];
             const totalPaid = invs.reduce((sum, inv) => sum + inv.total, 0);
-            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             return <article key={r.id} className="history-card">
               <div className="history-head" onClick={() => loadResidentInvoices(r)} style={{ cursor: "pointer" }}>
                 <div className="history-avatar">{r.fullName.slice(0,1).toUpperCase()}</div>
@@ -299,9 +368,10 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
                 {invs.length === 0
                   ? <p className="history-none">No invoices found for this resident.</p>
                   : invs.map((inv) => <div key={inv.id} className="history-inv-row">
-                    <span>#{inv.invoiceNumber}</span>
+                    <span style={{ fontWeight: 700 }}>#{inv.invoiceNumber}</span>
+                    <span style={{ color: "#888", fontSize: 10 }}>Book {inv.bookNumber}</span>
                     <span>{monthNames[(inv.billingMonth - 1) % 12]} {inv.billingYear}</span>
-                    <span>{inv.issueDate}</span>
+                    <span style={{ color: "#aaa", fontSize: 11 }}>{inv.issueDate}</span>
                     <b>฿{inv.total.toLocaleString()}</b>
                   </div>)
                 }
