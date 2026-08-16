@@ -11,7 +11,8 @@ const K = {
   // Pricing
   daily: "฿450 per night",
   monthly: "฿4,000 per month",
-  deposit: "50% of first month (฿2,000) — paid when you sign the contract",
+  vip: "฿8,000 per month",
+  deposit: "50% of first month (฿2,000 standard / ฿4,000 VIP) — paid when you sign the contract",
   depositPolicy: {
     en: "A 50% deposit (฿2,000) is required along with a copy of your ID or passport. Please note: any fraud or falsified documents will be reported to the police immediately and the original passport/ID may be held until the matter is resolved.",
     th: "ต้องชำระมัดจำ 50% (฿2,000) พร้อมสำเนาบัตรประชาชนหรือพาสปอร์ต หากพบการแจ้งข้อมูลเท็จหรือการโกง ทางที่พักจะดำเนินการแจ้งตำรวจทันที และอาจกักพาสปอร์ต/บัตรประชาชนต้นฉบับไว้จนกว่าเรื่องจะสิ้นสุด",
@@ -23,9 +24,9 @@ const K = {
   totalRooms: 47,
   floors: "Floors 2, 3 and 4 — plus VIP rooms",
   roomTypes: {
-    en: "Standard rooms and VIP rooms. All rooms include: AC, hot shower, fridge, TV, wardrobe, desk and free Wi-Fi.",
-    th: "ห้องมาตรฐานและห้อง VIP ทุกห้องมี: แอร์, ฝักบัวน้ำอุ่น, ตู้เย็น, TV, ตู้เสื้อผ้า, โต๊ะ และ Wi-Fi ฟรี",
-    my: "Standard ခန်းများနှင့် VIP ခန်းများ။ ခန်းတိုင်းတွင် — AC၊ ရေပူချိုး၊ ရေခဲသေတ္တာ၊ TV၊ ဝတ်စားဆင်ယင်ချိတ်၊ စားပွဲနှင့် Wi-Fi အခမဲ့ပါရှိသည်",
+    en: `Standard rooms (${K.monthly}/month) and VIP rooms (${K.vip}/month). All rooms include: AC, hot shower, fridge, TV, wardrobe, desk and free Wi-Fi.`,
+    th: `ห้องมาตรฐาน (${K.monthly}/เดือน) และห้อง VIP (${K.vip}/เดือน) ทุกห้องมี: แอร์, ฝักบัวน้ำอุ่น, ตู้เย็น, TV, ตู้เสื้อผ้า, โต๊ะ และ Wi-Fi ฟรี`,
+    my: `Standard ခန်း (${K.monthly}/လ) နှင့် VIP ခန်း (${K.vip}/လ)။ ခန်းတိုင်းတွင် — AC၊ ရေပူချိုး၊ ရေခဲသေတ္တာ၊ TV၊ ဝတ်စားဆင်ယင်ချိတ်၊ စားပွဲနှင့် Wi-Fi အခမဲ့ပါရှိသည်`,
   },
 
   // Facilities
@@ -156,6 +157,13 @@ const K = {
   },
 };
 
+// ─── Contact footer appended to every reply ────────────────────────────
+const contactFooter: Record<BotLanguage, (line: string) => string> = {
+  en: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
+  th: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
+  my: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
+};
+
 // ─── Q&A rules ─────────────────────────────────────────────────────────
 type QA = { patterns: RegExp[]; answer: (l: BotLanguage) => string };
 
@@ -172,11 +180,11 @@ const qa: QA[] = [
 
   // Price / cost
   {
-    patterns: [/price|cost|rate|how much|fee|charge|ราคา|ค่าเช่า|ค่าห้อง|ราคา|ဈေးနှုန်|ဘယ်လောက်/i],
+    patterns: [/price|cost|rate|how much|fee|charge|vip|ราคา|ค่าเช่า|ค่าห้อง|ห้อง vip|ဈေးနှုန်|ဘယ်လောက်|VIP/i],
     answer: (l) => ({
-      en: `Daily: ${K.daily}\nMonthly: ${K.monthly}\nDeposit: ${K.deposit}\nOffer: ${K.promotion}`,
-      th: `รายวัน: ${K.daily}\nรายเดือน: ${K.monthly}\nมัดจำ: เงินมัดจำ 50% (฿2,000)\nโปรโมชัน: ${K.promotion}`,
-      my: `နေ့စဉ်: ${K.daily}\nလစဉ်: ${K.monthly}\nအာမခံ: ${K.deposit}\nကမ်းလှမ်းချက်: ${K.promotion}`,
+      en: `Standard room: ${K.monthly}/month · Daily: ${K.daily}\nVIP room: ${K.vip}/month\nDeposit: ${K.deposit}\nOffer: ${K.promotion}`,
+      th: `ห้องมาตรฐาน: ${K.monthly}/เดือน · รายวัน: ${K.daily}\nห้อง VIP: ${K.vip}/เดือน\nมัดจำ: 50% (มาตรฐาน ฿2,000 / VIP ฿4,000)\nโปรโมชัน: ${K.promotion}`,
+      my: `Standard ခန်း: ${K.monthly}/လ · နေ့စဉ်: ${K.daily}\nVIP ခန်း: ${K.vip}/လ\nအာမခံ: ${K.deposit}\nကမ်းလှမ်းချက်: ${K.promotion}`,
     }[l]),
   },
 
@@ -360,7 +368,9 @@ export function botReply(text: string, lang: BotLanguage, lineId: string): strin
   const q = text.trim();
   if (!q) return "";
   for (const item of qa) {
-    if (item.patterns.some((p) => p.test(q))) return item.answer(lang);
+    if (item.patterns.some((p) => p.test(q))) {
+      return item.answer(lang) + contactFooter[lang](lineId);
+    }
   }
   return fallback[lang](lineId);
 }
