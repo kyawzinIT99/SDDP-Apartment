@@ -35,6 +35,8 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const [n8nReady, setN8nReady] = useState(false);
   const [hosting, setHosting] = useState("render-sqlite");
   const [pipelineFilter, setPipelineFilter] = useState<"all" | PipelineStatus>("all");
+  const [inquiryPage, setInquiryPage] = useState(1);
+  const INQUIRY_PAGE_SIZE = 5;
   const [residentFilter, setResidentFilter] = useState<"active" | "checked_out" | "all">("active");
   const [converting, setConverting] = useState<string>("");
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
@@ -66,6 +68,10 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const newInquiries = inquiries.filter((item) => item.status === "new").length;
   const activeResidents = residents.filter((item) => item.status === "active").length;
   const visibleInquiries = pipelineFilter === "all" ? inquiries : inquiries.filter((item) => item.status === pipelineFilter);
+  const inquiryPageCount = Math.max(1, Math.ceil(visibleInquiries.length / INQUIRY_PAGE_SIZE));
+  const inquiryPageSafe = Math.min(inquiryPage, inquiryPageCount);
+  const pagedInquiries = visibleInquiries.slice((inquiryPageSafe - 1) * INQUIRY_PAGE_SIZE, inquiryPageSafe * INQUIRY_PAGE_SIZE);
+  function setInquiryFilter(f: "all" | PipelineStatus) { setPipelineFilter(f); setInquiryPage(1); }
   const visibleResidents = useMemo(() => residents.filter((item) => residentFilter === "all" || item.status === residentFilter), [residents, residentFilter]);
 
   function field<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) { setSettings((current) => ({ ...current, [key]: value })); setStatus("Unsaved changes"); }
@@ -289,18 +295,34 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
 
       {tab === "inquiries" && <section className="editor-card inquiry-table">
         <div className="card-head"><div><span>GUEST PIPELINE</span><h2>Follow up, then move guests in</h2><p>New website requests start here. Mark contacted or booked, add a staff note, then convert a confirmed guest into a resident record.</p></div></div>
-        <div className="pipeline-tabs"><button type="button" className={pipelineFilter === "all" ? "active" : ""} onClick={() => setPipelineFilter("all")}>All ({inquiries.length})</button>{pipeline.map((step) => <button type="button" key={step.id} className={pipelineFilter === step.id ? "active" : ""} onClick={() => setPipelineFilter(step.id)}>{step.label} ({inquiries.filter((item) => item.status === step.id).length})</button>)}</div>
-        {visibleInquiries.length === 0 ? <div className="empty-state"><b>No inquiries in this step</b><p>New website requests will appear here first.</p></div> : visibleInquiries.map((item) => <article key={item.id} className="pipeline-card">
-          <span className={`lead-status ${item.status}`}>{item.status}</span>
-          <div><b>{item.name}</b><small>{item.phone}{item.email ? ` · ${item.email}` : ""} · {item.channel} · {item.locale.toUpperCase()}</small></div>
-          <div><b>{item.roomNumber ? `Room ${item.roomNumber}` : item.stayType}</b><small>{item.stayType} · {item.arrivalDate || "Arrival not set"}</small></div>
-          <p>{item.message || "No guest note"}</p>
-          <time>{new Date(item.createdAt).toLocaleString()}</time>
-          <div className="pipeline-actions">{pipeline.filter((step) => step.id !== "converted").map((step) => <button type="button" key={step.id} disabled={item.status === "converted"} className={item.status === step.id ? "active" : ""} onClick={() => setInquiryStatus(item.id, step.id)}>{step.label}</button>)}
-            {item.status !== "converted" && <button type="button" className="convert" onClick={() => startConvert(item)}>Move in</button>}
-          </div>
-          <label className="staff-note">Staff note<textarea defaultValue={item.notes ?? ""} rows={2} onBlur={(event) => { if (event.target.value !== (item.notes ?? "")) saveInquiryNotes(item.id, event.target.value); }} /></label>
-        </article>)}
+        <div className="pipeline-tabs">
+          <button type="button" className={pipelineFilter === "all" ? "active" : ""} onClick={() => setInquiryFilter("all")}>All ({inquiries.length})</button>
+          {pipeline.map((step) => <button type="button" key={step.id} className={pipelineFilter === step.id ? "active" : ""} onClick={() => setInquiryFilter(step.id)}>{step.label} ({inquiries.filter((item) => item.status === step.id).length})</button>)}
+        </div>
+        {visibleInquiries.length === 0
+          ? <div className="empty-state"><b>No inquiries in this step</b><p>New website requests will appear here first.</p></div>
+          : <>
+            {pagedInquiries.map((item) => <article key={item.id} className="pipeline-card">
+              <span className={`lead-status ${item.status}`}>{item.status}</span>
+              <div><b>{item.name}</b><small>{item.phone}{item.email ? ` · ${item.email}` : ""} · {item.channel} · {item.locale.toUpperCase()}</small></div>
+              <div><b>{item.roomNumber ? `Room ${item.roomNumber}` : item.stayType}</b><small>{item.stayType} · {item.arrivalDate || "Arrival not set"}</small></div>
+              <p>{item.message || "No guest note"}</p>
+              <time>{new Date(item.createdAt).toLocaleString()}</time>
+              <div className="pipeline-actions">{pipeline.filter((step) => step.id !== "converted").map((step) => <button type="button" key={step.id} disabled={item.status === "converted"} className={item.status === step.id ? "active" : ""} onClick={() => setInquiryStatus(item.id, step.id)}>{step.label}</button>)}
+                {item.status !== "converted" && <button type="button" className="convert" onClick={() => startConvert(item)}>Move in</button>}
+              </div>
+              <label className="staff-note">Staff note<textarea defaultValue={item.notes ?? ""} rows={2} onBlur={(event) => { if (event.target.value !== (item.notes ?? "")) saveInquiryNotes(item.id, event.target.value); }} /></label>
+            </article>)}
+            {inquiryPageCount > 1 && <nav className="pagination">
+              <button type="button" className="page-arrow" disabled={inquiryPageSafe === 1} onClick={() => setInquiryPage((p) => p - 1)}>‹</button>
+              {Array.from({ length: inquiryPageCount }, (_, i) => i + 1).map((n) => (
+                <button type="button" key={n} className={`page-num${n === inquiryPageSafe ? " active" : ""}`} onClick={() => setInquiryPage(n)}>{n}</button>
+              ))}
+              <button type="button" className="page-arrow" disabled={inquiryPageSafe === inquiryPageCount} onClick={() => setInquiryPage((p) => p + 1)}>›</button>
+              <small>{(inquiryPageSafe - 1) * INQUIRY_PAGE_SIZE + 1}–{Math.min(inquiryPageSafe * INQUIRY_PAGE_SIZE, visibleInquiries.length)} of {visibleInquiries.length}</small>
+            </nav>}
+          </>
+        }
       </section>}
 
       {tab === "residents" && <div className="resident-layout">
