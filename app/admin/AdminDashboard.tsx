@@ -72,6 +72,21 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const inquiryPageSafe = Math.min(inquiryPage, inquiryPageCount);
   const pagedInquiries = visibleInquiries.slice((inquiryPageSafe - 1) * INQUIRY_PAGE_SIZE, inquiryPageSafe * INQUIRY_PAGE_SIZE);
   function setInquiryFilter(f: "all" | PipelineStatus) { setPipelineFilter(f); setInquiryPage(1); }
+
+  async function clearOldLost() {
+    const lostOld = inquiries.filter((i) => i.status === "lost" && i.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000).length;
+    if (lostOld === 0) { setStatus("No lost inquiries older than 30 days to clear"); return; }
+    if (!confirm(`Delete ${lostOld} lost inquir${lostOld === 1 ? "y" : "ies"} older than 30 days? This cannot be undone.`)) return;
+    setStatus("Clearing…");
+    const r = await fetch("/api/inquiries", { method: "DELETE" });
+    const result = await r.json().catch(() => ({})) as { deleted?: number };
+    if (r.ok) {
+      setInquiries((prev) => prev.filter((i) => !(i.status === "lost" && i.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000)));
+      setStatus(`Cleared ${result.deleted ?? lostOld} old lost inquir${(result.deleted ?? lostOld) === 1 ? "y" : "ies"}`);
+    } else {
+      setStatus("Clear failed — try again");
+    }
+  }
   const visibleResidents = useMemo(() => residents.filter((item) => residentFilter === "all" || item.status === residentFilter), [residents, residentFilter]);
 
   function field<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) { setSettings((current) => ({ ...current, [key]: value })); setStatus("Unsaved changes"); }
@@ -294,7 +309,9 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       {tab === "gallery" && <section className="editor-card admin-gallery"><div className="card-head"><div><span>FACEBOOK LIBRARY</span><h2>{publicGallery.length} imported property photos</h2><p>Choose the hero image and control which photos visitors can see. Save once after making your selections.</p></div><a href={settings.facebookUrl + "/photos"} target="_blank" rel="noreferrer">Open Facebook ↗</a></div><div className="admin-gallery-grid">{publicGallery.map((image, index) => { const visible = !settings.galleryHidden.includes(image); return <figure key={image} className={visible ? "" : "is-hidden"}><img src={`/gallery/${image}`} alt="" /><figcaption><b>Photo {String(index + 1).padStart(2, "0")}{settings.heroImage === image ? " · Hero" : ""}</b><button onClick={() => toggleGallery(image)}>{visible ? "Hide" : "Show"}</button></figcaption></figure>; })}</div><button className="admin-save gallery-save" type="button" onClick={saveSettings}>Save gallery changes <b>↗</b></button></section>}
 
       {tab === "inquiries" && <section className="editor-card inquiry-table">
-        <div className="card-head"><div><span>GUEST PIPELINE</span><h2>Follow up, then move guests in</h2><p>New website requests start here. Mark contacted or booked, add a staff note, then convert a confirmed guest into a resident record.</p></div></div>
+        <div className="card-head"><div><span>GUEST PIPELINE</span><h2>Follow up, then move guests in</h2><p>New website requests start here. Mark contacted or booked, add a staff note, then convert a confirmed guest into a resident record.</p></div>
+          {isOwner && <button type="button" className="resident-action" style={{ color: "#b42020", flexShrink: 0 }} onClick={clearOldLost}>🗑 Clear lost &gt;30 days</button>}
+        </div>
         <div className="pipeline-tabs">
           <button type="button" className={pipelineFilter === "all" ? "active" : ""} onClick={() => setInquiryFilter("all")}>All ({inquiries.length})</button>
           {pipeline.map((step) => <button type="button" key={step.id} className={pipelineFilter === step.id ? "active" : ""} onClick={() => setInquiryFilter(step.id)}>{step.label} ({inquiries.filter((item) => item.status === step.id).length})</button>)}

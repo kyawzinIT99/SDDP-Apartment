@@ -35,6 +35,17 @@ export async function GET() {
   return Response.json(rows.results ?? []);
 }
 
+export async function DELETE(request: Request) {
+  const user = await getChatGPTUser();
+  if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
+  if (user.role !== "owner") return Response.json({ error: "Owner access required" }, { status: 403 });
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const { DB } = bindings(); await ensureSchema(DB!);
+  const count = await DB!.prepare("SELECT COUNT(*) AS n FROM inquiries WHERE status = 'lost' AND created_at < ?").bind(cutoff).first<{ n: number }>();
+  await DB!.prepare("DELETE FROM inquiries WHERE status = 'lost' AND created_at < ?").bind(cutoff).run();
+  return Response.json({ ok: true, deleted: count?.n ?? 0 });
+}
+
 export async function PATCH(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
