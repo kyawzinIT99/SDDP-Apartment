@@ -24,9 +24,9 @@ const K = {
   totalRooms: 47,
   floors: "Floors 2, 3 and 4 — plus VIP rooms",
   roomTypes: {
-    en: `Standard rooms (${K.monthly}/month) and VIP rooms (${K.vip}/month). All rooms include: AC, hot shower, fridge, TV, wardrobe, desk and free Wi-Fi.`,
-    th: `ห้องมาตรฐาน (${K.monthly}/เดือน) และห้อง VIP (${K.vip}/เดือน) ทุกห้องมี: แอร์, ฝักบัวน้ำอุ่น, ตู้เย็น, TV, ตู้เสื้อผ้า, โต๊ะ และ Wi-Fi ฟรี`,
-    my: `Standard ခန်း (${K.monthly}/လ) နှင့် VIP ခန်း (${K.vip}/လ)။ ခန်းတိုင်းတွင် — AC၊ ရေပူချိုး၊ ရေခဲသေတ္တာ၊ TV၊ ဝတ်စားဆင်ယင်ချိတ်၊ စားပွဲနှင့် Wi-Fi အခမဲ့ပါရှိသည်`,
+    en: "Standard rooms (฿4,000/month) and VIP rooms (฿8,000/month). All rooms include: AC, hot shower, fridge, TV, wardrobe, desk and free Wi-Fi.",
+    th: "ห้องมาตรฐาน (฿4,000/เดือน) และห้อง VIP (฿8,000/เดือน) ทุกห้องมี: แอร์, ฝักบัวน้ำอุ่น, ตู้เย็น, TV, ตู้เสื้อผ้า, โต๊ะ และ Wi-Fi ฟรี",
+    my: "Standard ခန်း (฿4,000/လ) နှင့် VIP ခန်း (฿8,000/လ)။ ခန်းတိုင်းတွင် — AC၊ ရေပူချိုး၊ ရေခဲသေတ္တာ၊ TV၊ ဝတ်စားဆင်ယင်ချိတ်၊ စားပွဲနှင့် Wi-Fi အခမဲ့ပါရှိသည်",
   },
 
   // Facilities
@@ -155,13 +155,6 @@ const K = {
       "✈️ ချင်းမိုင်လေဆိပ် — ကား ~၂၅ မိနစ် (20 km)",
     ],
   },
-};
-
-// ─── Contact footer appended to every reply ────────────────────────────
-const contactFooter: Record<BotLanguage, (line: string) => string> = {
-  en: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
-  th: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
-  my: (line) => `\n\n💬 @${line}\n📞 ${K.phone[0]}`,
 };
 
 // ─── Q&A rules ─────────────────────────────────────────────────────────
@@ -367,9 +360,10 @@ const fallback: Record<BotLanguage, (line: string) => string> = {
 export function botReply(text: string, lang: BotLanguage, lineId: string): string {
   const q = text.trim();
   if (!q) return "";
+  const footer = `\n\n💬 @${lineId}\n📞 ${K.phone[0]}`;
   for (const item of qa) {
     if (item.patterns.some((p) => p.test(q))) {
-      return item.answer(lang) + contactFooter[lang](lineId);
+      return item.answer(lang) + footer;
     }
   }
   return fallback[lang](lineId);
