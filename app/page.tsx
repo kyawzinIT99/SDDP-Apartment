@@ -179,15 +179,13 @@ export default function Home() {
 
   return (
     <main lang={language} style={theme}>
-      <header className={`nav${menuOpen ? " menu-open" : ""}`}>
+      <header className="nav">
         <a href="#top" className="brand" aria-label="SDDP Apartment home">
           <img src="/brand-logo.jpg" alt="SDDP Apartment" />
           <span><b>SDDP</b><small>APARTMENT</small></span>
         </a>
         <nav aria-label="Primary navigation">
-          {([["#top", nav[0]], ["#amenities", nav[1]], ["#availability", nav[2]], ["#gallery", nav[3]], ["#inquiry", nav[4]], ["#location", nav[5]]] as [string, string][]).map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
-          ))}
+          <a href="#top">{nav[0]}</a><a href="#amenities">{nav[1]}</a><a href="#availability">{nav[2]}</a><a href="#gallery">{nav[3]}</a><a href="#inquiry">{nav[4]}</a><a href="#location">{nav[5]}</a>
         </nav>
         <div className="nav-side">
           <div className="languages" aria-label="Language">
@@ -199,6 +197,15 @@ export default function Home() {
           </button>
         </div>
       </header>
+      {menuOpen && (
+        <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
+          <nav className="mobile-menu-panel">
+            {([["#top", nav[0]], ["#amenities", nav[1]], ["#availability", nav[2]], ["#gallery", nav[3]], ["#inquiry", nav[4]], ["#location", nav[5]]] as [string, string][]).map(([href, label]) => (
+              <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
+            ))}
+          </nav>
+        </div>
+      )}
 
       <section className="hero" id="top">
         <div className="hero-copy">
