@@ -68,13 +68,25 @@ function migrateLegacySqlite(dbPath: string) {
   }
 }
 
-export function nodeBindings(dbPath: string): NodeRuntime {
-  if (cached) return cached;
-  migrateLegacySqlite(dbPath);
-  mkdirSync(dirname(dbPath) === "." ? "data" : dirname(dbPath), { recursive: true });
-  const sqlite = openSqlite(dbPath);
+function openAt(path: string): SqliteDb {
+  migrateLegacySqlite(path);
+  mkdirSync(dirname(path) === "." ? "data" : dirname(path), { recursive: true });
+  const sqlite = openSqlite(path);
   sqlite.exec("PRAGMA journal_mode = WAL");
   sqlite.exec("PRAGMA foreign_keys = ON");
+  return sqlite;
+}
+
+export function nodeBindings(dbPath: string): NodeRuntime {
+  if (cached) return cached;
+  let sqlite: SqliteDb;
+  try {
+    sqlite = openAt(dbPath);
+  } catch (error) {
+    if (!dbPath.startsWith("/var/data")) throw error;
+    console.error("SDDP sqlite could not use", dbPath, error);
+    sqlite = openAt("./data/sddp.sqlite");
+  }
   cached = {
     DB: wrapDatabase(sqlite),
     N8N_INQUIRY_WEBHOOK: process.env.N8N_INQUIRY_WEBHOOK,
