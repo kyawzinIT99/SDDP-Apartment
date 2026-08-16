@@ -5,16 +5,70 @@ export const PAY_BY_DAY = 5;
 
 export const invoiceLetterhead = {
   name: "SDDP Apartment",
+  logo: "/brand-logo.jpg",
   thaiAddress: "เลขที่ 8/18 หมู่ที่ 2 ถนนเชียงใหม่-สันกำแพง (สายเก่า) ตำบลต้นเปา อำเภอสันกำแพง จังหวัดเชียงใหม่ 50130",
+  englishAddress: "8/18 Moo 2, Chiang Mai–San Kamphaeng (old road), Ton Pao, San Kamphaeng, Chiang Mai 50130",
   taxId: "0505560004656",
   phone: "064-5046997",
-  notes: "หมายเหตุ โปรดชำระค่าเช่าภายในวันที่ 5 ของทุกเดือน หากเกินกำหนดจะถูกปรับวันละ 100 บาท",
 };
 
-const ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-const teens = ["ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
-const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export type InvoiceLanguage = "en" | "th";
+
+const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthNamesTh = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+export const invoiceCopy = {
+  en: {
+    title: "INVOICE",
+    book: "Book no.",
+    number: "No.",
+    name: "Name",
+    address: "Address",
+    room: "Room",
+    month: "Month",
+    colNo: "No.",
+    colItem: "Description",
+    colAmount: "Amount",
+    rent: "Room rent",
+    electric: (rate: number) => `Electricity at ${rate} baht per unit`,
+    water: (rate: number) => `Water at ${rate} baht per unit`,
+    other: "Other",
+    previous: "Previous",
+    current: "Current",
+    used: "Used",
+    units: "units",
+    totalPay: "Total amount due",
+    date: "Date",
+    phone: "Tel.",
+    taxId: "Tax ID",
+    notes: "Please pay rent by the 5th of each month. A late fee of 100 baht per day applies after the due date.",
+  },
+  th: {
+    title: "ใบแจ้งหนี้",
+    book: "เล่มที่",
+    number: "เลขที่",
+    name: "ชื่อ",
+    address: "ที่อยู่",
+    room: "ห้อง",
+    month: "เดือน",
+    colNo: "ลำดับที่",
+    colItem: "รายการ",
+    colAmount: "จำนวนเงิน",
+    rent: "ค่าเช่าห้อง",
+    electric: (rate: number) => `ค่าไฟฟ้า หน่วยละ ${rate} บาท`,
+    water: (rate: number) => `ค่าน้ำ หน่วยละ ${rate} บาท`,
+    other: "อื่นๆ",
+    previous: "ก่อน",
+    current: "หลัง",
+    used: "ใช้ไป",
+    units: "หน่วย",
+    totalPay: "รวมเงินที่ชำระ",
+    date: "วันที่",
+    phone: "โทร.",
+    taxId: "เลขประจำตัวผู้เสียภาษีอากร",
+    notes: "หมายเหตุ โปรดชำระค่าเช่าภายในวันที่ 5 ของทุกเดือน หากเกินกำหนดจะถูกปรับวันละ 100 บาท",
+  },
+} as const;
 
 export type InvoiceRecord = {
   id: string;
@@ -75,6 +129,10 @@ export function usedUnits(previous: number, current: number) {
   return Math.max(0, current - previous);
 }
 
+const ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const teens = ["ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
 function underHundred(value: number) {
   if (value < 10) return ones[value];
   if (value < 20) return teens[value - 10];
@@ -110,9 +168,33 @@ export function padInvoiceNo(value: number | string) {
   return String(parseAmount(value) || value).replace(/\D/g, "").padStart(4, "0").slice(-4) || "0001";
 }
 
-export function billingLabel(month: number, year: string) {
-  const name = monthNames[Math.min(12, Math.max(1, month)) - 1] ?? "Jan";
-  return `${name}, ${year}`;
+export function amountInThai(amount: number) {
+  const value = Math.round(Math.max(0, amount));
+  if (value === 0) return "ศูนย์บาทถ้วน";
+  const digits = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+  const scale = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
+  const parts = String(value).split("").reverse();
+  let words = "";
+  for (let index = 0; index < parts.length; index += 1) {
+    const n = Number(parts[index]);
+    if (!n) continue;
+    if (index === 0 && n === 1 && parts.length > 1) words = `เอ็ด${words}`;
+    else if (index === 1 && n === 1) words = `สิบ${words}`;
+    else if (index === 1 && n === 2) words = `ยี่สิบ${words}`;
+    else if (index === 1) words = `${digits[n]}สิบ${words}`;
+    else words = `${digits[n]}${scale[index]}${words}`;
+  }
+  return `${words}บาทถ้วน`;
+}
+
+export function amountWords(amount: number, language: InvoiceLanguage) {
+  return language === "th" ? amountInThai(amount) : amountInEnglish(amount);
+}
+
+export function billingLabel(month: number, year: string, language: InvoiceLanguage = "en") {
+  const names = language === "th" ? monthNamesTh : monthNamesEn;
+  const name = names[Math.min(12, Math.max(1, month)) - 1] ?? names[0];
+  return language === "th" ? `${name} ${year}` : `${name}, ${year}`;
 }
 
 export function printDate(iso: string) {

@@ -1,46 +1,50 @@
-import { billingLabel, invoiceLetterhead, money, printDate, type InvoiceRecord } from "../lib/invoice";
+import { amountWords, billingLabel, invoiceCopy, invoiceLetterhead, money, printDate, type InvoiceLanguage, type InvoiceRecord } from "../lib/invoice";
 
 type InvoiceView = Omit<InvoiceRecord, "id" | "createdAt"> & { id?: string; createdAt?: number };
 
-export default function InvoiceSheet({ invoice, photo }: { invoice: InvoiceView; photo: string }) {
+export default function InvoiceSheet({ invoice, language }: { invoice: InvoiceView; language: InvoiceLanguage }) {
+  const t = invoiceCopy[language];
+  const meter = (previous: number, current: number, units: number) => previous || current
+    ? `${t.previous} ${previous || "—"}  ${t.current} ${current || "—"}  ${t.used} ${units || 0} ${t.units}`
+    : "";
   const rows = [
-    { no: 1, title: "ค่าเช่าห้อง", detail: "", amount: invoice.rentAmount },
-    { no: 2, title: `ค่าไฟฟ้า หน่วยละ ${invoice.electricRate} บาท`, detail: invoice.electricPrev || invoice.electricCurr ? `ก่อน ${invoice.electricPrev || "—"}  หลัง ${invoice.electricCurr || "—"}  ใช้ไป ${invoice.electricUnits || 0} หน่วย` : "", amount: invoice.electricAmount },
-    { no: 3, title: `ค่าน้ำ หน่วยละ ${invoice.waterRate} บาท`, detail: invoice.waterPrev || invoice.waterCurr ? `ก่อน ${invoice.waterPrev || "—"}  หลัง ${invoice.waterCurr || "—"}  ใช้ไป ${invoice.waterUnits || 0} หน่วย` : "", amount: invoice.waterAmount },
-    { no: 4, title: invoice.otherLabel ? `อื่นๆ ${invoice.otherLabel}` : "อื่นๆ", detail: "", amount: invoice.otherAmount },
+    { no: 1, title: t.rent, detail: "", amount: invoice.rentAmount },
+    { no: 2, title: t.electric(invoice.electricRate), detail: meter(invoice.electricPrev, invoice.electricCurr, invoice.electricUnits), amount: invoice.electricAmount },
+    { no: 3, title: t.water(invoice.waterRate), detail: meter(invoice.waterPrev, invoice.waterCurr, invoice.waterUnits), amount: invoice.waterAmount },
+    { no: 4, title: invoice.otherLabel ? `${t.other} ${invoice.otherLabel}` : t.other, detail: "", amount: invoice.otherAmount },
   ];
 
   return (
-    <article className="invoice-paper">
+    <article className="invoice-paper" lang={language}>
       <header className="invoice-head">
-        <img src={photo} alt="" />
+        <img src="/brand-logo.jpg" alt="SDDP Apartment" />
         <div>
           <b>{invoiceLetterhead.name}</b>
-          <p>{invoiceLetterhead.thaiAddress}</p>
-          <p>โทร. {invoiceLetterhead.phone}</p>
-          <p>เลขประจำตัวผู้เสียภาษีอากร {invoiceLetterhead.taxId}</p>
+          <p>{language === "th" ? invoiceLetterhead.thaiAddress : invoiceLetterhead.englishAddress}</p>
+          <p>{t.phone} {invoiceLetterhead.phone}</p>
+          <p>{t.taxId} {invoiceLetterhead.taxId}</p>
         </div>
         <dl>
-          <div><dt>เล่มที่</dt><dd>{invoice.bookNumber}</dd></div>
-          <div><dt>เลขที่</dt><dd>{invoice.invoiceNumber}</dd></div>
+          <div><dt>{t.book}</dt><dd>{invoice.bookNumber}</dd></div>
+          <div><dt>{t.number}</dt><dd>{invoice.invoiceNumber}</dd></div>
         </dl>
       </header>
 
       <div className="invoice-meta">
         <div className="invoice-guest">
-          <p><span>ชื่อ</span><b>{invoice.residentName}</b></p>
-          <p><span>ที่อยู่</span><b>{invoice.address}</b></p>
+          <p><span>{t.name}</span><b>{invoice.residentName}</b></p>
+          <p><span>{t.address}</span><b>{invoice.address}</b></p>
         </div>
         <aside>
-          <strong>ใบแจ้งหนี้</strong>
-          <p><span>ห้อง</span><b>{invoice.roomNumber}</b></p>
-          <p><span>เดือน</span><b>{invoice.billingYear ? billingLabel(invoice.billingMonth, invoice.billingYear) : ""}</b></p>
+          <strong>{t.title}</strong>
+          <p><span>{t.room}</span><b>{invoice.roomNumber}</b></p>
+          <p><span>{t.month}</span><b>{invoice.billingYear ? billingLabel(invoice.billingMonth, invoice.billingYear, language) : ""}</b></p>
         </aside>
       </div>
 
       <table>
         <thead>
-          <tr><th>ลำดับที่</th><th>รายการ</th><th>จำนวนเงิน</th></tr>
+          <tr><th>{t.colNo}</th><th>{t.colItem}</th><th>{t.colAmount}</th></tr>
         </thead>
         <tbody>
           {rows.map((row) => (
@@ -55,15 +59,15 @@ export default function InvoiceSheet({ invoice, photo }: { invoice: InvoiceView;
       </table>
 
       <footer>
-        <p className="invoice-words">{invoice.totalWords}</p>
+        <p className="invoice-words">{amountWords(invoice.total, language)}</p>
         <div className="invoice-total">
-          <span>รวมเงินที่ชำระ</span>
+          <span>{t.totalPay}</span>
           <b>{invoice.total ? money(invoice.total) : ""}</b>
         </div>
       </footer>
       <div className="invoice-foot">
-        <small>*{invoiceLetterhead.notes}</small>
-        <p><span>วันที่</span><b>{printDate(invoice.issueDate)}</b></p>
+        <small>*{t.notes}</small>
+        <p><span>{t.date}</span><b>{printDate(invoice.issueDate)}</b></p>
       </div>
     </article>
   );

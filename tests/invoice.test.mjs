@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { amountInEnglish, billingLabel, buildInvoice, money, printDate, usedUnits } from "../app/lib/invoice.ts";
+import { amountInEnglish, amountInThai, billingLabel, buildInvoice, money, printDate, usedUnits } from "../app/lib/invoice.ts";
 
 test("matches the original SDDP invoice totals and English words", () => {
   const invoice = buildInvoice({
@@ -22,8 +22,11 @@ test("matches the original SDDP invoice totals and English words", () => {
   assert.equal(invoice.waterAmount, 187);
   assert.equal(invoice.total, 6602);
   assert.equal(invoice.totalWords, "Six thousand six hundred and two baht.");
+  assert.equal(amountInThai(6602), "หกพันหกร้อยสองบาทถ้วน");
+  assert.equal(amountInEnglish(6602), "Six thousand six hundred and two baht.");
   assert.equal(money(6602), "6,602.--");
   assert.equal(billingLabel(10, "2025"), "Oct, 2025");
+  assert.equal(billingLabel(10, "2025", "th"), "ตุลาคม 2025");
   assert.equal(printDate("2025-10-01"), "01/10/2025");
 });
 

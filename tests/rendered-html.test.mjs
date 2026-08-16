@@ -81,7 +81,8 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(admin, /Printable invoice|InvoiceDesk/);
   assert.match(storage, /CREATE TABLE IF NOT EXISTS invoices/);
   assert.match(invoiceApi, /buildInvoice/);
-  assert.match(invoiceSheet, /ใบแจ้งหนี้/);
-  assert.match(invoiceSheet, /ค่าเช่าห้อง/);
+  assert.match(invoiceSheet, /brand-logo\.jpg/);
+  assert.match(invoiceSheet, /invoiceCopy/);
+  assert.match(invoiceSheet, /language/);
   assert.doesNotMatch(admin, /Existing VPS/);
 });

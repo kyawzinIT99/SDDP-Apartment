@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { buildInvoice, ELECTRIC_RATE, parseAmount, WATER_RATE, type InvoiceRecord } from "../lib/invoice";
+import { buildInvoice, ELECTRIC_RATE, parseAmount, WATER_RATE, type InvoiceLanguage, type InvoiceRecord } from "../lib/invoice";
 import { TypedDateField } from "../lib/typed-date";
 import InvoiceSheet from "./InvoiceSheet";
 
@@ -44,16 +44,15 @@ function emptyDraft(monthlyPrice: string, next: { bookNumber: string; invoiceNum
 export default function InvoiceDesk({
   residents,
   monthlyPrice,
-  photo,
   seed,
   onStatus,
 }: {
   residents: Resident[];
   monthlyPrice: string;
-  photo: string;
   seed: Seed;
   onStatus: (value: string) => void;
 }) {
+  const [language, setLanguage] = useState<InvoiceLanguage>("th");
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [draft, setDraft] = useState(() => emptyDraft(monthlyPrice, { bookNumber: "014", invoiceNumber: "0691" }));
   const [saved, setSaved] = useState<InvoiceRecord | null>(null);
@@ -136,7 +135,9 @@ export default function InvoiceDesk({
   return (
     <div className="invoice-desk">
       <form className="editor-card invoice-desk-form" onSubmit={(event) => { event.preventDefault(); saveAndPrint(); }}>
-        <div className="card-head"><div><span>ใบแจ้งหนี้</span><h2>Fill, save, then print</h2><p>This follows the original SDDP paper invoice. Type the year as 2026. Meter use and the total are calculated for you.</p></div></div>
+        <div className="card-head"><div><span>ใบแจ้งหนี้</span><h2>Fill, save, then print</h2><p>Use the original SDDP logo. Choose Thai or English before printing. Type the year as 2026.</p></div>
+          <div className="locale-tabs">{(["th", "en"] as InvoiceLanguage[]).map((code) => <button type="button" key={code} className={language === code ? "active" : ""} onClick={() => setLanguage(code)}>{code === "th" ? "ไทย" : "English"}</button>)}</div>
+        </div>
         <label>Resident<select value="" onChange={(event) => pickResident(event.target.value)}><option value="">Choose a resident or type below</option>{residents.filter((item) => item.status === "active").map((item) => <option key={item.id} value={item.id}>{item.fullName} · Room {item.roomNumber}</option>)}</select></label>
         <div className="two-col">
           <label>Name / ชื่อ<input required value={draft.residentName} onChange={(event) => field("residentName", event.target.value)} /></label>
@@ -162,7 +163,7 @@ export default function InvoiceDesk({
       </form>
 
       <div className="invoice-preview">
-        <InvoiceSheet invoice={paper} photo={photo} />
+        <InvoiceSheet invoice={paper} language={language} />
       </div>
 
       <section className="editor-card invoice-history">

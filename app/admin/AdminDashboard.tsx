@@ -220,7 +220,7 @@ export default function AdminDashboard({ displayName }: { displayName: string })
         </section>
       </div>}
 
-      {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} photo={`/gallery/${settings.heroImage}`} seed={invoiceSeed} onStatus={setStatus} />}
+      {tab === "invoices" && <InvoiceDesk residents={residents} monthlyPrice={settings.monthlyPrice} seed={invoiceSeed} onStatus={setStatus} />}
 
       {tab === "automation" && <div className="automation-grid">
         <section className="editor-card automation-status">
