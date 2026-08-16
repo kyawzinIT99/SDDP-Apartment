@@ -9,7 +9,7 @@ export async function GET() {
   return Response.json({
     n8nConfigured: Boolean(runtime.N8N_INQUIRY_WEBHOOK && runtime.N8N_WEBHOOK_SECRET),
     passwordAuth: adminPasswordConfigured(),
-    hosting: process.env.SDDP_DB_PATH ? "render-sqlite" : "cloudflare-d1",
+    hosting: process.env.SDDP_DB_PATH || process.env.RENDER ? "render-sqlite" : "cloudflare-d1",
     vpsLater: true,
   });
 }

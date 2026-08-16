@@ -1,6 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+
+type SqliteDb = {
+  prepare: (sql: string) => { get: (...values: unknown[]) => unknown; all: (...values: unknown[]) => unknown[]; run: (...values: unknown[]) => unknown };
+  exec: (sql: string) => void;
+};
 
 type D1Result<T> = { results?: T[] };
 type D1Statement = {
@@ -21,7 +25,14 @@ type NodeRuntime = {
 
 let cached: NodeRuntime | undefined;
 
-function statement(db: DatabaseSync, sql: string, values: unknown[] = []): D1Statement {
+function openSqlite(path: string): SqliteDb {
+  const loader = (process as NodeJS.Process & { getBuiltinModule?: (name: string) => { DatabaseSync: new (file: string) => SqliteDb } }).getBuiltinModule;
+  if (typeof loader !== "function") throw new Error("SQLite requires Node 22 with --experimental-sqlite");
+  const { DatabaseSync } = loader("node:sqlite");
+  return new DatabaseSync(path);
+}
+
+function statement(db: SqliteDb, sql: string, values: unknown[] = []): D1Statement {
   return {
     bind: (...next: unknown[]) => statement(db, sql, next),
     first: async <T>() => (db.prepare(sql).get(...values) as T | undefined) ?? null,
@@ -30,7 +41,7 @@ function statement(db: DatabaseSync, sql: string, values: unknown[] = []): D1Sta
   };
 }
 
-function wrapDatabase(db: DatabaseSync): D1Database {
+function wrapDatabase(db: SqliteDb): D1Database {
   return {
     prepare: (sql: string) => statement(db, sql),
     batch: async (items: D1Statement[]) => {
@@ -49,7 +60,7 @@ function wrapDatabase(db: DatabaseSync): D1Database {
 export function nodeBindings(dbPath: string): NodeRuntime {
   if (cached) return cached;
   mkdirSync(dirname(dbPath) === "." ? "data" : dirname(dbPath), { recursive: true });
-  const sqlite = new DatabaseSync(dbPath);
+  const sqlite = openSqlite(dbPath);
   sqlite.exec("PRAGMA journal_mode = WAL");
   sqlite.exec("PRAGMA foreign_keys = ON");
   cached = {

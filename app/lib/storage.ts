@@ -27,7 +27,7 @@ function nodeEnv(name: string) {
 }
 
 export function bindings() {
-  const dbPath = nodeEnv("SDDP_DB_PATH");
+  const dbPath = nodeEnv("SDDP_DB_PATH") || (nodeEnv("RENDER") ? "./data/sddp.sqlite" : undefined);
   if (dbPath) return nodeBindings(dbPath);
   const runtime = env as unknown as RuntimeBindings;
   if (!runtime.DB) throw new Error("Database binding is unavailable");
