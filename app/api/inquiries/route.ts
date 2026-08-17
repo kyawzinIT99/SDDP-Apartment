@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { occupiedRoomSet } from "../../lib/occupancy";
 import { normalizeRoomNumber, roomCatalog } from "../../lib/rooms";
+import { defaultSiteSettings, type SiteSettings } from "../../lib/site-defaults";
 import { bindings, ensureSchema } from "../../lib/storage";
 
 type InquiryInput = { name?: string; phone?: string; email?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
@@ -23,7 +24,26 @@ export async function POST(request: Request) {
     .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
   let routed = false;
   if (runtime.N8N_INQUIRY_WEBHOOK) {
-    try { const response = await fetch(runtime.N8N_INQUIRY_WEBHOOK, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify({ event: "sddp.inquiry.created", ...record }) }); routed = response.ok; } catch { routed = false; }
+    try {
+      const row = await runtime.DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
+      const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
+      const site = { ...defaultSiteSettings, ...saved };
+      const payload = {
+        event: "sddp.inquiry.created",
+        ...record,
+        lineId: site.lineId,
+        phonePrimary: site.phonePrimary,
+        bankName: site.bankName,
+        bankAccountName: site.bankAccountName,
+        bankAccountNumber: site.bankAccountNumber,
+        bankPromptPay: site.bankPromptPay,
+        monthlyPrice: site.monthlyPrice,
+        monthlyDeposit: site.monthlyDeposit,
+        site: "https://sddp-apartment.onrender.com",
+      };
+      const response = await fetch(runtime.N8N_INQUIRY_WEBHOOK, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify(payload) });
+      routed = response.ok;
+    } catch { routed = false; }
   }
   return Response.json({ ok: true, inquiryId: record.id, routed }, { status: 201 });
 }

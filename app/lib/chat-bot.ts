@@ -12,11 +12,11 @@ const K = {
   daily: "฿450 per night",
   monthly: "฿4,000 per month",
   vip: "฿8,000 per month",
-  deposit: "50% of first month (฿2,000 standard / ฿4,000 VIP) — paid when you sign the contract",
+  deposit: "50% of first month (฿2,000 standard / ฿4,000 VIP) to reserve the room",
   depositPolicy: {
-    en: "A 50% deposit (฿2,000) is required along with a copy of your ID or passport. Please note: any fraud or falsified documents will be reported to the police immediately and the original passport/ID may be held until the matter is resolved.",
-    th: "ต้องชำระมัดจำ 50% (฿2,000) พร้อมสำเนาบัตรประชาชนหรือพาสปอร์ต หากพบการแจ้งข้อมูลเท็จหรือการโกง ทางที่พักจะดำเนินการแจ้งตำรวจทันที และอาจกักพาสปอร์ต/บัตรประชาชนต้นฉบับไว้จนกว่าเรื่องจะสิ้นสุด",
-    my: "စာချုပ်ချုပ်ဆိုသည့်အခါ 50% (฿2,000) ကြိုတင်ငွေ နှင့် မှတ်ပုံတင် သို့မဟုတ် နိုင်ငံကူးလက်မှတ်မိတ္တူ ပေးရမည်။ မှားယွင်းသောစာရွက်စာတမ်းများ သို့မဟုတ် လိမ်ညာမှုတွေ့ရှိပါက ရဲထံ ချက်ချင်းတိုင်ကြားမည်ဖြစ်ပြီး ကိစ္စပြေလည်သည်အထိ နိုင်ငံကူးလက်မှတ်ကို ထိန်းသိမ်းထားနိုင်သည်",
+    en: "A 50% deposit is required to reserve your room (฿2,000 standard / ฿4,000 VIP). Transfer the deposit, then send the payment slip to Line @SDDP.Apartment. After we confirm the deposit, the room is reserved. If you do not arrive, the deposit is not refunded. Please also send a copy of your ID or passport. Fraud or falsified documents will be reported to the police.",
+    th: "ต้องชำระมัดจำ 50% เพื่อจองห้อง (มาตรฐาน ฿2,000 / VIP ฿4,000) โอนเงินแล้วส่งสลิปไปที่ Line @SDDP.Apartment เมื่อยืนยันยอดแล้ว ห้องจะถูกจองไว้ หากไม่มาเข้าพัก มัดจำไม่คืน กรุณาส่งสำเนาบัตรประชาชนหรือพาสปอร์ตด้วย หากพบเอกสารปลอมหรือการโกง จะแจ้งตำรวจ",
+    my: "အခန်းကြိုတင်စာရင်းသွင်းရန် 50% အာမခံငွေ လိုအပ်သည် (Standard ฿2,000 / VIP ฿4,000)။ ငွေလွှဲပြီး ပြေစာ slip ကို Line @SDDP.Apartment သို့ ပို့ပါ။ အတည်ပြုပြီးနောက် အခန်းကို သိမ်းထားမည်။ မလာရောက်ပါက အာမခံငွေ ပြန်အမ်းမည်မဟုတ်ပါ။ မှတ်ပုံတင်/နိုင်ငံကူးလက်မှတ် မိတ္တူလည်း ပေးပို့ပါ။",
   },
   promotion: "Stay 10 nights → get 1 night free",
 

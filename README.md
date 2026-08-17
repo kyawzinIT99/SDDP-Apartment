@@ -52,9 +52,15 @@ This project does not use other websites or their git remotes.
 
 SDDP can reuse the existing Hostinger n8n instance. Install a **new** workflow named **SDDP Inquiry Alert**. Do not edit BCC or PDF workflows.
 
-1. In n8n, import `n8n/sddp-inquiry-alert.json`.
+1. In n8n, import `n8n/sddp-inquiry-alert.json` (replace the previous SDDP Inquiry Alert if it already exists).
 2. Set n8n env `SDDP_N8N_WEBHOOK_SECRET` and `SDDP_ALERT_EMAIL`. Attach an **SDDP Gmail** credential (not the BCC or PDF workflow).
-3. Activate **SDDP Inquiry Alert**. The webhook path is `/webhook/sddp-inquiry-alert`.
-4. On Render, set `N8N_INQUIRY_WEBHOOK` to that URL and `N8N_WEBHOOK_SECRET` to the same secret.
+3. Optional bank fallbacks if the admin bank fields are empty: `SDDP_BANK_NAME`, `SDDP_BANK_ACCOUNT_NAME`, `SDDP_BANK_ACCOUNT_NUMBER`, `SDDP_BANK_PROMPTPAY`.
+4. Activate **SDDP Inquiry Alert**. The webhook path is `/webhook/sddp-inquiry-alert`.
+5. On Render, set `N8N_INQUIRY_WEBHOOK` to that URL and `N8N_WEBHOOK_SECRET` to the same secret.
 
-Inquiry and resident records still save in this app first. Passport numbers are never included in those alerts.
+Each website inquiry then:
+- saves in the CRM first
+- emails the **guest** a professional deposit letter (50% to reserve, non-refundable if they do not arrive, bank details, send slip to Line)
+- emails **staff** the same lead, so you can mark **Deposit ✓** after the slip arrives
+
+Passport numbers are never included in those alerts.

@@ -2,14 +2,16 @@ export type Locale = "en" | "th" | "my";
 export type SiteSettings = {
   dailyPrice: string; monthlyPrice: string; monthlyDeposit: string; promotion: string;
   phonePrimary: string; phoneSecondary: string; whatsapp: string; lineId: string;
+  bankName: string; bankAccountName: string; bankAccountNumber: string; bankPromptPay: string;
   address: string; mapUrl: string; mapEmbedUrl: string; facebookUrl: string; parkingQuota: string;
   accentColor: string; actionColor: string; backgroundColor: string; textColor: string;
   heroImage: string; galleryHidden: string[];
   copy: Partial<Record<Locale, Record<string, string>>>;
 };
 export const defaultSiteSettings: SiteSettings = {
-  dailyPrice: "450", monthlyPrice: "4,000", monthlyDeposit: "1 month", promotion: "Stay 10 nights, get 1 night free",
+  dailyPrice: "450", monthlyPrice: "4,000", monthlyDeposit: "50% of first month", promotion: "Stay 10 nights, get 1 night free",
   phonePrimary: "094-293-5296", phoneSecondary: "064-504-6997", whatsapp: "+66942935296", lineId: "SDDP.Apartment",
+  bankName: "", bankAccountName: "", bankAccountNumber: "", bankPromptPay: "",
   address: "8/18 Moo 2, Ton Pao, San Kamphaeng, Chiang Mai 50130", mapUrl: "https://maps.app.goo.gl/L2Vm3riBiPHxG4d2A", mapEmbedUrl: "https://www.google.com/maps?q=SDDP%20Apartment%2C%208%2F18%20Moo%202%2C%20Ton%20Pao%2C%20San%20Kamphaeng%2C%20Chiang%20Mai%2050130&output=embed", facebookUrl: "https://www.facebook.com/Sddpapartment", parkingQuota: "Limited - please confirm when booking",
   accentColor: "#ffd94f", actionColor: "#ee302b", backgroundColor: "#f7f3eb", textColor: "#1b1c1d",
   heroImage: "4254e9b028ca9674.jpg", galleryHidden: [], copy: {},
