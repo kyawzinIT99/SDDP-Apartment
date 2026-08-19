@@ -7,6 +7,7 @@ const K = {
   phone: ["094-293-5296", "064-504-6997"],
   line: "SDDP.Apartment",
   facebook: "facebook.com/Sddpapartment",
+  careChannel: "https://carechannel.onrender.com/en",
 
   // Pricing
   daily: "฿450 per night",
@@ -306,6 +307,16 @@ const qa: QA[] = [
       en: `SDDP has ${K.totalRooms} rooms on ${K.floors}. Check live availability on this page — it updates every 30 seconds.`,
       th: `SDDP มีทั้งหมด ${K.totalRooms} ห้อง บน${K.floors} ตรวจสอบห้องว่างสดได้บนหน้านี้ อัปเดตทุก 30 วินาที`,
       my: `SDDP တွင် ${K.totalRooms} ခန်းရှိသည် — ${K.floors}။ ဤစာမျက်နှာတွင် အခန်းလွတ်ကို တိုက်ရိုက်ကြည့်နိုင်သည် (30 စက္ကန့်တိုင်း အပ်ဒိတ်)`,
+    }[l]),
+  },
+
+  // Medical assistant / clinic / doctor
+  {
+    patterns: [/medical|doctor|clinic|sick|health|pharmacy|nurse|hospital|แพทย์|คลินิก|ป่วย|สุขภาพ|โรงพยาบาล|ဆေး|ဆေးခန်း|ဆရာဝန်|ဆေးရုံ/i],
+    answer: (l) => ({
+      en: `For health questions, use our medical assistant Care Channel:\n${K.careChannel}\n\nIt is not an emergency service. For urgent care, go to the nearest hospital or call 1669.`,
+      th: `สำหรับคำถามด้านสุขภาพ ใช้ผู้ช่วย Care Channel:\n${K.careChannel}\n\nไม่ใช่บริการฉุกเฉิน หากเร่งด่วนให้ไปโรงพยาบาลใกล้บ้าน หรือโทร 1669`,
+      my: `ကျန်းမာရေးမေးခွန်းများအတွက် Care Channel ဆေးဘက်ဆိုင်ရာ အကူအညီကို သုံးပါ:\n${K.careChannel}\n\nအရေးပေါ်ဝန်ဆောင်မှုမဟုတ်ပါ။ အရေးပေါ်ဆိုပါက အနီးဆုံးဆေးရုံသို့ သွားပါ သို့မဟုတ် 1669 ခေါ်ပါ။`,
     }[l]),
   },
 

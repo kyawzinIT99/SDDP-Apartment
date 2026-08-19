@@ -31,6 +31,8 @@ const words = {
     parkingSub: "Available within the property quota",
     secure: "Keycard access",
     secureSub: "A safer, easier way in",
+    medical: "Medical assistant",
+    medicalSub: "Open Care Channel for health questions",
     availabilityLabel: "Live availability", availabilityTitle: "See which rooms are free right now.", availabilitySub: "Room status comes from current resident records. Guest names and private details are never shown.", available: "Available", occupied: "Occupied", unknown: "Check with staff", floor: "Floor", availableNow: "available now", autoUpdate: "Updates automatically",
     gallery: "A real look inside",
     gallerySub: "Recent photos from the official SDDP Apartment Facebook page.",
@@ -61,6 +63,8 @@ const words = {
     parkingSub: "ให้บริการตามโควตาของที่พัก",
     secure: "ระบบคีย์การ์ด",
     secureSub: "สะดวกและปลอดภัยยิ่งขึ้น",
+    medical: "ผู้ช่วยด้านสุขภาพ",
+    medicalSub: "เปิด Care Channel สำหรับคำถามสุขภาพ",
     availabilityLabel: "สถานะห้องแบบปัจจุบัน", availabilityTitle: "ตรวจสอบห้องว่างได้ทันที", availabilitySub: "สถานะมาจากข้อมูลผู้พักปัจจุบัน โดยไม่แสดงชื่อหรือข้อมูลส่วนตัวของผู้เข้าพัก", available: "ว่าง", occupied: "มีผู้พัก", unknown: "สอบถามพนักงาน", floor: "ชั้น", availableNow: "ห้องว่างขณะนี้", autoUpdate: "อัปเดตอัตโนมัติ",
     gallery: "ชมบรรยากาศจริง",
     gallerySub: "ภาพล่าสุดจากเพจ Facebook ทางการของ SDDP Apartment",
@@ -91,6 +95,8 @@ const words = {
     parkingSub: "နေရာလွတ်ရှိမှုအလိုက် ရရှိနိုင်သည်",
     secure: "ကီးကတ် ဝင်ပေါက်",
     secureSub: "ပိုမိုလုံခြုံ လွယ်ကူစွာ ဝင်နိုင်သည်",
+    medical: "ဆေးဘက်ဆိုင်ရာ အကူအညီ",
+    medicalSub: "ကျန်းမာရေးမေးခွန်းများအတွက် Care Channel ကို ဖွင့်ပါ",
     availabilityLabel: "လက်ရှိအခန်းအခြေအနေ", availabilityTitle: "ယခုလွတ်နေသောအခန်းများကို ကြည့်ပါ။", availabilitySub: "အခန်းအခြေအနေကို လက်ရှိနေထိုင်သူမှတ်တမ်းမှ ရယူထားပြီး ဧည့်သည်အမည်နှင့် ကိုယ်ရေးအချက်အလက်များကို မဖော်ပြပါ။", available: "လွတ်", occupied: "နေထိုင်သူရှိ", unknown: "ဝန်ထမ်းကို မေးပါ", floor: "အထပ်", availableNow: "ယခုလွတ်", autoUpdate: "အလိုအလျောက် အပ်ဒိတ်လုပ်သည်",
     gallery: "အတွင်းပိုင်းကို အမှန်တကယ်ကြည့်ပါ",
     gallerySub: "SDDP Apartment တရားဝင် Facebook စာမျက်နှာမှ နောက်ဆုံးဓာတ်ပုံများ။",
@@ -101,6 +107,8 @@ const words = {
     packagesLabel: "တည်းခိုမှု ရွေးချယ်စရာ", packagesTitle: "နေ့စဉ် သို့မဟုတ် လစဉ်။ အခန်းသန့်ရှင်းမှု အတူတူပါ။", packagesSub: "ဈေးနှုန်းမှာ ထိုင်းဘတ်ဖြစ်သည်။ ခရီးမထွက်မီ အဖွဲ့က အခန်းကို အတည်ပြုပေးပါမည်။", dailyStay: "နေ့စဉ် တည်းခိုမှု", monthlyStay: "လစဉ် တည်းခိုမှု", deposit: "အာမခံငွေ", offer: "လက်ရှိ ကမ်းလှမ်းချက်", chatLine: "Line မှ စကားပြောရန်", whoLabel: "မည်သူများ တည်းခိုသနည်း", whoTitle: "ချင်းမိုင်အနီး အဆင်ပြေသော နေရာ။", whoOneTitle: "အလုပ်နှင့် ပညာသင်", whoOne: "San Kamphaeng တွင် တိတ်ဆိတ်ပြီး ဈေးသက်သာသော လစဉ်အခန်းများ။", whoTwoTitle: "ခဏတာ လာရောက်မှု", whoTwo: "စာချုပ်ရှည်မလိုဘဲ သန့်ရှင်းစွာ တည်းခိုလိုသော နေ့စဉ်အခန်းများ။", whoThreeTitle: "ရောက်ရှိရ လွယ်ကူမှု", whoThree: "TM30 အကူအညီ၊ Wi-Fi၊ ပါကင်နှင့် ကီးကတ် ဝင်ပေါက်များ အဆင်သင့်ရှိသည်။",
   },
 } satisfies Record<Language, Record<string, string | string[]>>;
+
+const careChannelUrl = "https://carechannel.onrender.com/en";
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>("en");
@@ -260,6 +268,7 @@ export default function Home() {
         <div className="section-title"><span>03 / {t.amenitiesLabel}</span><h2>{t.essentials}</h2></div>
         <div className="amenity-grid">
           {[["⌂",t.tm30,t.tm30Sub],["⌁",t.wifi,t.wifiSub],["◇",t.parking,t.parkingSub],["▣",t.secure,t.secureSub]].map(([icon,title,sub]) => <article key={title}><i>{icon}</i><h3>{title}</h3><p>{sub}</p></article>)}
+          <a className="amenity-link" href={careChannelUrl} target="_blank" rel="noreferrer"><article><i>✚</i><h3>{t.medical}</h3><p>{t.medicalSub}</p></article></a>
         </div>
       </section>
 
@@ -296,7 +305,7 @@ export default function Home() {
       </section>
 
       <section className="location-section" id="location"><div><span>07 / {t.locationLabel}</span><h2>{t.locationTitle}</h2><p>{settings.address}</p><a href={settings.mapUrl} target="_blank" rel="noreferrer">{t.directions} ↗</a></div><div className="map-frame"><iframe src={settings.mapEmbedUrl} title="SDDP Apartment on Google Maps" loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div></section>
-      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></div></footer>
+      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a><a href={careChannelUrl} target="_blank" rel="noreferrer">{t.medical}</a></div></footer>
       <div className="chat-widget-wrap">
         <ChatWidget lang={language} lineId={lineId} />
       </div>
