@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { encryptPassport } from "../../lib/guest-crypto";
-import { bangkokToday } from "../../lib/occupancy";
+import { bangkokToday, occupiedRoomSet } from "../../lib/occupancy";
+import { setConfiguredRoomAvailability } from "../../lib/room-availability";
 import { normalizeRoomNumber } from "../../lib/rooms";
 import { bindings, ensureSchema } from "../../lib/storage";
 
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
     };
     await runtime.DB!.prepare("INSERT INTO residents (id, full_name, phone, email, nationality, resident_type, passport_ciphertext, passport_last4, room_number, check_in_date, check_out_date, status, consent_recorded_at, created_at, updated_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)")
       .bind(record.id, record.fullName, record.phone, record.email, record.nationality, record.residentType, record.passportCiphertext, record.passportLast4, record.roomNumber, record.checkInDate, record.checkOutDate, now, now, now, user.email).run();
+    if (record.roomNumber) await setConfiguredRoomAvailability(runtime.DB!, record.roomNumber, false, user.email);
     const fromInquiryId = clean(input.fromInquiryId, 80);
     if (fromInquiryId) {
       await runtime.DB!.prepare("UPDATE inquiries SET status = 'converted', converted_resident_id = ?, updated_at = ? WHERE id = ?")
@@ -81,12 +83,16 @@ export async function PATCH(request: Request) {
   const id = clean(input.id, 80);
   if (!id) return Response.json({ error: "Resident id is required" }, { status: 400 });
   const { DB } = bindings(); await ensureSchema(DB!);
+  const resident = await DB!.prepare("SELECT room_number AS roomNumber, status FROM residents WHERE id = ?").bind(id).first<{ roomNumber: string; status: string }>();
+  if (!resident) return Response.json({ error: "Resident not found" }, { status: 404 });
 
   if (input.checkInDate !== undefined || input.checkOutDate !== undefined) {
     const checkInDate = clean(input.checkInDate, 20);
     const checkOutDate = clean(input.checkOutDate, 20);
     await DB!.prepare("UPDATE residents SET check_in_date = ?, check_out_date = ?, updated_at = ? WHERE id = ?")
       .bind(checkInDate, checkOutDate, Date.now(), id).run();
+    const occupied = await occupiedRoomSet(DB!);
+    await setConfiguredRoomAvailability(DB!, resident.roomNumber, !occupied.has(normalizeRoomNumber(resident.roomNumber)), user.email);
     return Response.json({ ok: true, id, checkInDate, checkOutDate });
   }
 
@@ -94,5 +100,7 @@ export async function PATCH(request: Request) {
   if (!status) return Response.json({ error: "A valid status or dates are required" }, { status: 400 });
   await DB!.prepare("UPDATE residents SET status = ?, updated_at = ? WHERE id = ?")
     .bind(status, Date.now(), id).run();
+  const occupied = await occupiedRoomSet(DB!);
+  await setConfiguredRoomAvailability(DB!, resident.roomNumber, !occupied.has(normalizeRoomNumber(resident.roomNumber)), user.email);
   return Response.json({ ok: true, id, status });
 }

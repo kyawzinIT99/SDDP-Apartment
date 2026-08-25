@@ -133,7 +133,7 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/site").then((response) => response.ok ? response.json() : null).then((data) => data && setSettings(data)).catch(() => undefined);
     let active = true;
-    const loadAvailability = () => fetch("/api/rooms").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.rooms) setAvailability(data); }).catch(() => undefined);
+    const loadAvailability = () => fetch("/api/rooms", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.rooms) setAvailability(data); }).catch(() => undefined);
     loadAvailability();
     const timer = window.setInterval(loadAvailability, 30_000);
     return () => { active = false; window.clearInterval(timer); };
@@ -173,7 +173,7 @@ export default function Home() {
       const response = await fetch("/api/inquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...data, roomNumber: selectedRoom, locale: language }) });
       const result = await response.json();
       if (response.status === 409 && result.code === "room_unavailable") {
-        const refreshed = await fetch("/api/rooms").then((value) => value.json());
+        const refreshed = await fetch("/api/rooms", { cache: "no-store" }).then((value) => value.json());
         if (refreshed?.rooms) setAvailability(refreshed);
         setSelectedRoom("");
         const notice = `${t.room} ${result.roomNumber} ${t.chooseAnother}`;

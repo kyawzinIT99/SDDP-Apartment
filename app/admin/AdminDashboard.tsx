@@ -65,7 +65,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       fetch("/api/inquiries").then((r) => r.ok ? r.json() : []),
       fetch("/api/residents").then((r) => r.ok ? r.json() : []),
       fetch("/api/admin/status").then((r) => r.ok ? r.json() : {}),
-      fetch("/api/rooms").then((r) => r.ok ? r.json() : { rooms: [] }),
+      fetch("/api/rooms", { cache: "no-store" }).then((r) => r.ok ? r.json() : { rooms: [] }),
     ]).then(([site, leads, residentRows, automation, rooms]) => {
       setSettings(site);
       setInquiries(Array.isArray(leads) ? leads : []);
@@ -112,7 +112,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   async function saveSettings() { setStatus("Saving…"); const response = await fetch("/api/site", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(settings) }); setStatus(response.ok ? "Published to the website" : "Save failed — try again"); }
   async function save(event: FormEvent) { event.preventDefault(); await saveSettings(); }
   async function refreshRooms() {
-    const rooms = await fetch("/api/rooms").then((value) => value.ok ? value.json() : { rooms: [] });
+    const rooms = await fetch("/api/rooms", { cache: "no-store" }).then((value) => value.ok ? value.json() : { rooms: [] });
     setRoomBoard(Array.isArray(rooms.rooms) ? rooms.rooms : []);
     setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
   }
