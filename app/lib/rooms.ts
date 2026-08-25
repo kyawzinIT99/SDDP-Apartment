@@ -27,11 +27,15 @@ export const roomCatalog: RoomDefinition[] = [
   { roomNumber: "VIP2", floor: "4", sortOrder: 4902 },
 ];
 
-// Current inventory confirmed by SDDP staff. This is used only until the
-// room-status editor is saved for the first time on a database.
-export const initialAvailableRoomNumbers = [
+// Current occupied inventory confirmed by SDDP staff. This is used only until
+// the room-status editor is saved for the first time on a database.
+export const initialOccupiedRoomNumbers = [
   "202", "203", "207", "301", "303", "305", "307", "312", "315", "405",
 ];
+const initialOccupiedRooms = new Set(initialOccupiedRoomNumbers);
+export const initialAvailableRoomNumbers = roomCatalog
+  .map((room) => room.roomNumber)
+  .filter((roomNumber) => !initialOccupiedRooms.has(roomNumber));
 
 export function normalizeRoomNumber(value: string): string {
   const compact = value.trim().toUpperCase().replace(/\s+/g, "");
