@@ -43,7 +43,7 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(defaults, /SDDP\.Apartment/);
   assert.match(page, /publicGallery/);
   assert.match(page, /Chat on Line/);
-  assert.match(page, /line-official/);
+  assert.doesNotMatch(page, /className="line-official/);
   assert.doesNotMatch(page, /Chat on WhatsApp|wa\.me|wa-float/);
   assert.match(page, /Stay options/);
   assert.match(inquiryApi, /sddp\.inquiry\.created/);
@@ -70,6 +70,8 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(occupancy, /SELECT DISTINCT room_number/);
   assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
   assert.match(roomsApi, /source: "database"/);
+  assert.match(roomsApi, /availableRoomNumbers/);
+  assert.match(admin, /Publish room availability/);
   assert.doesNotMatch(storage, /cloudflare:workers/);
   assert.match(storage, /nodeSqliteAvailable|nodeBindings/);
   assert.match(storage, /\/var\/data\/sddp\.sqlite/);

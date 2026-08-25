@@ -8,8 +8,9 @@ import InvoiceDesk from "./InvoiceDesk";
 type ResidentInvoice = { id: string; bookNumber: string; invoiceNumber: string; billingMonth: number; billingYear: string; total: number; issueDate: string };
 type Inquiry = { id: string; name: string; phone: string; email?: string; channel: string; stayType: string; roomNumber?: string; arrivalDate?: string; message?: string; locale: string; status: string; notes?: string; convertedResidentId?: string; createdAt: number };
 type Resident = { id: string; fullName: string; phone: string; email: string; nationality: string; residentType: string; passportLast4: string; roomNumber: string; checkInDate?: string; checkOutDate?: string; status: string; createdAt: number };
+type RoomStatus = { roomNumber: string; floor: string; status: "available" | "occupied" | "unknown" };
 type ResidentDraft = { fullName: string; phone: string; email: string; nationality: string; residentType: string; passportNumber: string; roomNumber: string; checkInDate: string; checkOutDate: string; consentConfirmed: boolean; fromInquiryId?: string };
-type Tab = "overview" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "users" | "automation";
+type Tab = "overview" | "rooms" | "content" | "gallery" | "inquiries" | "residents" | "invoices" | "history" | "users" | "automation";
 type AdminUser = { id: string; username: string; displayName: string; role: "owner" | "admin"; active: number; createdAt: number };
 type PipelineStatus = "new" | "contacted" | "booked" | "deposit" | "lost" | "converted";
 
@@ -37,6 +38,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const [residents, setResidents] = useState<Resident[]>([]);
   const [residentDraft, setResidentDraft] = useState<ResidentDraft>(emptyResident);
   const [availableCount, setAvailableCount] = useState(0);
+  const [roomBoard, setRoomBoard] = useState<RoomStatus[]>([]);
   const [status, setStatus] = useState("Loading current website…");
   const [n8nReady, setN8nReady] = useState(false);
   const [hosting, setHosting] = useState("render-sqlite");
@@ -70,6 +72,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       setResidents(Array.isArray(residentRows) ? residentRows : []);
       setN8nReady(Boolean(automation.n8nConfigured));
       setHosting(automation.hosting ?? "render-sqlite");
+      setRoomBoard(Array.isArray(rooms.rooms) ? rooms.rooms : []);
       setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
       setStatus(Array.isArray(residentRows) ? "All changes saved" : "Admin APIs are not connected");
     }).catch(() => setStatus("Could not load the latest data"));
@@ -110,7 +113,24 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   async function save(event: FormEvent) { event.preventDefault(); await saveSettings(); }
   async function refreshRooms() {
     const rooms = await fetch("/api/rooms").then((value) => value.ok ? value.json() : { rooms: [] });
+    setRoomBoard(Array.isArray(rooms.rooms) ? rooms.rooms : []);
     setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
+  }
+  function toggleRoomStatus(roomNumber: string) {
+    setRoomBoard((current) => current.map((room) => room.roomNumber === roomNumber
+      ? { ...room, status: room.status === "available" ? "occupied" : "available" }
+      : room));
+    setStatus("Unsaved room changes");
+  }
+  async function saveRoomStatuses() {
+    setStatus("Saving room availability…");
+    const availableRoomNumbers = roomBoard.filter((room) => room.status === "available").map((room) => room.roomNumber);
+    const response = await fetch("/api/rooms", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ availableRoomNumbers }) });
+    const result = await response.json().catch(() => ({ rooms: [] }));
+    if (!response.ok) { setStatus(result.error ?? "Room availability save failed"); return; }
+    setRoomBoard(Array.isArray(result.rooms) ? result.rooms : []);
+    setAvailableCount((result.rooms ?? []).filter((room: RoomStatus) => room.status === "available").length);
+    setStatus("Room availability published to the website");
   }
   async function addResident(event: FormEvent) {
     event.preventDefault(); setStatus("Saving resident securely…");
@@ -149,6 +169,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     if (!response.ok) { setStatus("Inquiry update failed"); return; }
     setInquiries((current) => current.map((item) => item.id === id ? { ...item, status: nextStatus } : item));
     setStatus(`Inquiry marked ${nextStatus}`);
+    await refreshRooms();
   }
   async function saveInquiryNotes(id: string, notes: string) {
     const response = await fetch("/api/inquiries", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, notes }) });
@@ -178,6 +199,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
 
   const titles: Record<Tab, string> = {
     overview: "Today at SDDP",
+    rooms: "Room availability",
     content: "Website content",
     gallery: "Photo gallery",
     inquiries: "Guest pipeline",
@@ -294,6 +316,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       <a className="brand" href="/"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>ADMIN PANEL</small></span></a>
       <div className="admin-menu">{([
         ["overview", "Overview"],
+        ["rooms", `Rooms (${availableCount} free)`],
         ["content", "Website content"],
         ["gallery", "Photo gallery"],
         ["inquiries", `Inquiries (${newInquiries})`],
@@ -302,7 +325,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
         ["history", `Past residents (${residents.filter((r) => r.status === "checked_out").length})`],
         ...(isOwner ? [["users", `Users (${adminUsers.length})`]] as const : []),
         ["automation", "Hosting"],
-      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => id === "users" ? openUsersTab() : setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "history" ? "◷" : id === "users" ? "👤" : "⌁"}</i>{label}</button>)}</div>
+      ] as const).map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => id === "users" ? openUsersTab() : setTab(id as Tab)}><i>{id === "overview" ? "▣" : id === "rooms" ? "▦" : id === "content" ? "Aa" : id === "gallery" ? "▧" : id === "inquiries" ? "↗" : id === "residents" ? "◎" : id === "invoices" ? "฿" : id === "history" ? "◷" : id === "users" ? "👤" : "⌁"}</i>{label}</button>)}</div>
       <div className="admin-user"><span>{displayName.slice(0, 1).toUpperCase()}</span><div><b>{displayName}</b><small>Property editor</small></div><button type="button" className="admin-logout" onClick={logout}>Sign out</button></div>
     </aside>
     <section className="admin-main">
@@ -318,6 +341,12 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
           {newInquiries === 0 && <div className="empty-state compact"><b>No new inquiries</b><p>New website requests will appear here first.</p></div>}
         </section>
       </div>}
+
+      {tab === "rooms" && <section className="editor-card wide admin-room-editor">
+        <div className="card-head"><div><span>LIVE INVENTORY</span><h2>Choose the rooms guests can book</h2><p>Green rooms are available on the public website. Red rooms are occupied. Active residents and confirmed deposits always keep their room occupied.</p></div><b>{roomBoard.filter((room) => room.status === "available").length} available</b></div>
+        <div className="floor-list">{Object.entries(roomBoard.reduce<Record<string, RoomStatus[]>>((groups, room) => { (groups[room.floor] ??= []).push(room); return groups; }, {})).map(([floor, rooms]) => <section className="floor-card" key={floor}><header><span>Floor</span><b>{floor}</b><small>{rooms.filter((room) => room.status === "available").length}/{rooms.length} available</small></header><div className="room-grid">{rooms.map((room) => <button type="button" key={room.roomNumber} className={`room-status ${room.status}`} onClick={() => toggleRoomStatus(room.roomNumber)}><b>{room.roomNumber}</b><span><i />{room.status === "available" ? "Available" : "Occupied"}</span></button>)}</div></section>)}</div>
+        <button className="admin-save" type="button" onClick={saveRoomStatuses}>Publish room availability <b>↗</b></button>
+      </section>}
 
       {tab === "content" && <form className="editor-grid" onSubmit={save}>
         <section className="editor-card wide"><div className="card-head"><div><span>PUBLIC COPY</span><h2>Homepage messaging</h2></div><div className="locale-tabs">{(["en", "th", "my"] as Locale[]).map((code) => <button type="button" key={code} className={locale === code ? "active" : ""} onClick={() => setLocale(code)}>{code === "en" ? "English" : code === "th" ? "ไทย" : "မြန်မာ"}</button>)}</div></div><div className="copy-fields">{editableCopy.map((key) => <label key={key}>{key.replace(/([A-Z])/g, " $1")}<textarea rows={key.includes("intro") || key.includes("Sub") ? 3 : 2} value={settings.copy[locale]?.[key] ?? ""} placeholder={`Use the current ${locale.toUpperCase()} text`} onChange={(event) => copyField(key, event.target.value)} /></label>)}</div></section>

@@ -53,7 +53,7 @@ export function TypedDateField({
     setMonth(nextMonth);
     setYear(nextYear);
     const iso = toIsoDate(nextDay, nextMonth, nextYear);
-    if (iso) onChange?.(iso);
+    if (iso || (!nextDay && !nextMonth && !nextYear)) onChange?.(iso);
   }
 
   return (
