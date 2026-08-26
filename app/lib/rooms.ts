@@ -13,42 +13,46 @@ function numberedFloor(floor: number, lastRoom: number): RoomDefinition[] {
   }));
 }
 
-// Master inventory transcribed from the supplied SDDP room drawing. Any new
-// room number stored in the resident database is appended by the public API.
+// Master inventory confirmed by SDDP staff. Any new room number stored in the
+// resident database is appended by the public API.
 export const roomCatalog: RoomDefinition[] = [
   { roomNumber: "101", floor: "1", sortOrder: 101 },
   { roomNumber: "102", floor: "1", sortOrder: 102 },
   { roomNumber: "103", floor: "1", sortOrder: 103 },
-  { roomNumber: "104", floor: "1", sortOrder: 104 },
-  ...numberedFloor(2, 215),
+  { roomNumber: "105", floor: "1", sortOrder: 105 },
+  { roomNumber: "106", floor: "1", sortOrder: 106 },
+  { roomNumber: "107", floor: "1", sortOrder: 107 },
+  ...numberedFloor(2, 216),
   ...numberedFloor(3, 316),
-  ...numberedFloor(4, 414),
+  ...numberedFloor(4, 409),
+  { roomNumber: "411", floor: "4", sortOrder: 411 },
   { roomNumber: "VIP1", floor: "4", sortOrder: 4901 },
   { roomNumber: "VIP2", floor: "4", sortOrder: 4902 },
+  { roomNumber: "VIP3", floor: "4", sortOrder: 4903 },
 ];
 
-// Current occupied inventory confirmed by SDDP staff. This is used only until
-// the room-status editor is saved for the first time on a database.
-export const initialOccupiedRoomNumbers = [
+// Current available inventory confirmed by SDDP staff. This is used until the
+// room-status editor or the resident workflow records a later change.
+export const initialAvailableRoomNumbers = [
   "202", "203", "207", "301", "303", "305", "307", "312", "315", "405",
 ];
-const initialOccupiedRooms = new Set(initialOccupiedRoomNumbers);
-export const initialAvailableRoomNumbers = roomCatalog
+const initialAvailableRooms = new Set(initialAvailableRoomNumbers);
+export const initialOccupiedRoomNumbers = roomCatalog
   .map((room) => room.roomNumber)
-  .filter((roomNumber) => !initialOccupiedRooms.has(roomNumber));
+  .filter((roomNumber) => !initialAvailableRooms.has(roomNumber));
 
 export function normalizeRoomNumber(value: string): string {
   const compact = value.trim().toUpperCase().replace(/\s+/g, "");
   const digits = compact.match(/(?:ROOM|ห้อง)?(\d{3})$/);
   if (digits) return digits[1];
-  const vip = compact.match(/^VIP[-_]?([12])$/);
+  const vip = compact.match(/^VIP[-_]?([123])$/);
   if (vip) return `VIP${vip[1]}`;
   return compact.slice(0, 20);
 }
 
 export function inferFloor(roomNumber: string): string {
   if (/^[1234]\d{2}$/.test(roomNumber)) return roomNumber[0];
-  if (/^VIP[12]$/.test(roomNumber)) return "4";
+  if (/^VIP[123]$/.test(roomNumber)) return "4";
   return "Other";
 }
 

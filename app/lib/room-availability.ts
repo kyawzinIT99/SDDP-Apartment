@@ -1,7 +1,9 @@
 import { initialAvailableRoomNumbers, normalizeRoomNumber, roomCatalog } from "./rooms";
 import type { D1Database } from "./storage";
 
-const SETTING_ID = "room_availability";
+// v2 resets the earlier inverted inventory once, then preserves all later
+// changes made by staff and by the resident/deposit workflow.
+const SETTING_ID = "room_availability_v2";
 const catalogNumbers = new Set(roomCatalog.map((room) => room.roomNumber));
 
 export async function configuredAvailableRooms(DB: D1Database) {
