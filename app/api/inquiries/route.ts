@@ -23,13 +23,8 @@ export async function POST(request: Request) {
   const record = { id: crypto.randomUUID(), name: input.name.trim().slice(0, 120), phone: input.phone.trim().slice(0, 80), email: input.email?.trim().toLowerCase().slice(0, 160) ?? "", channel: input.channel ?? "phone", stayType: input.stayType ?? "monthly", roomNumber, arrivalDate: input.arrivalDate ?? "", message: input.message?.trim().slice(0, 1000) ?? "", locale: input.locale ?? "en", createdAt: now };
   await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
     .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
-  let routed = false;
-  try {
-    routed = await notifyInquiryN8n(record);
-  } catch (error) {
-    console.error("SDDP n8n inquiry webhook error", error);
-  }
-  return Response.json({ ok: true, inquiryId: record.id, routed }, { status: 201 });
+  const mail = await notifyInquiryN8n(record);
+  return Response.json({ ok: true, inquiryId: record.id, routed: mail.routed, mailError: mail.error ?? null }, { status: 201 });
 }
 
 export async function GET() {
@@ -65,17 +60,12 @@ export async function PATCH(request: Request) {
   if (!current) return Response.json({ error: "Inquiry not found" }, { status: 404 });
   if (input.sendMail) {
     if (!current.email) return Response.json({ error: "This inquiry has no email address" }, { status: 400 });
-    let routed = false;
-    try {
-      routed = await notifyInquiryN8n({
-        id: current.id, name: current.name, phone: current.phone, email: current.email, channel: current.channel,
-        stayType: current.stayType, roomNumber: current.roomNumber, arrivalDate: current.arrivalDate || "",
-        message: current.message || "", locale: current.locale, createdAt: current.createdAt,
-      });
-    } catch (error) {
-      console.error("SDDP n8n inquiry webhook error", error);
-    }
-    return Response.json({ ok: routed, id, routed });
+    const mail = await notifyInquiryN8n({
+      id: current.id, name: current.name, phone: current.phone, email: current.email, channel: current.channel,
+      stayType: current.stayType, roomNumber: current.roomNumber, arrivalDate: current.arrivalDate || "",
+      message: current.message || "", locale: current.locale, createdAt: current.createdAt,
+    });
+    return Response.json({ ok: mail.routed, id, routed: mail.routed, mailError: mail.error ?? null });
   }
   if (status) {
     await DB!.prepare("UPDATE inquiries SET status = ?, updated_at = ? WHERE id = ?").bind(status, Date.now(), id).run();
