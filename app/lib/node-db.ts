@@ -97,7 +97,7 @@ export function nodeBindings(dbPath: string): NodeRuntime {
   }
   cached = {
     DB: wrapDatabase(sqlite),
-    N8N_INQUIRY_WEBHOOK: process.env.N8N_INQUIRY_WEBHOOK,
+    N8N_INQUIRY_WEBHOOK: process.env.N8N_INQUIRY_WEBHOOK || "https://n8n-al8a.srv1707349.hstgr.cloud/webhook/sddp-inquiry-alert",
     N8N_WEBHOOK_SECRET: process.env.N8N_WEBHOOK_SECRET,
     GUEST_DATA_ENCRYPTION_KEY: process.env.GUEST_DATA_ENCRYPTION_KEY,
   };

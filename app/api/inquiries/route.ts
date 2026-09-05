@@ -24,7 +24,8 @@ export async function POST(request: Request) {
   await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
     .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
   let routed = false;
-  if (runtime.N8N_INQUIRY_WEBHOOK) {
+  const webhook = runtime.N8N_INQUIRY_WEBHOOK;
+  if (webhook) {
     try {
       const row = await runtime.DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
       const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
@@ -42,9 +43,13 @@ export async function POST(request: Request) {
         monthlyDeposit: site.monthlyDeposit,
         site: "https://sddp-apartment.onrender.com",
       };
-      const response = await fetch(runtime.N8N_INQUIRY_WEBHOOK, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify(payload) });
+      const response = await fetch(webhook, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify(payload) });
       routed = response.ok;
-    } catch { routed = false; }
+      if (!response.ok) console.error("SDDP n8n inquiry webhook failed", response.status, await response.text().catch(() => ""));
+    } catch (error) {
+      console.error("SDDP n8n inquiry webhook error", error);
+      routed = false;
+    }
   }
   return Response.json({ ok: true, inquiryId: record.id, routed }, { status: 201 });
 }
