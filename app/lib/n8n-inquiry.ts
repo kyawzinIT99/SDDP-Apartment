@@ -10,6 +10,82 @@ export type InquiryMailRecord = {
 
 export type InquiryMailResult = { routed: boolean; error?: string };
 
+type NodeHttps = {
+  request: (
+    options: Record<string, unknown>,
+    callback: (res: { statusCode?: number; on: (event: string, fn: (chunk?: Buffer | string) => void) => void }) => void,
+  ) => {
+    setTimeout: (ms: number, fn: () => void) => void;
+    on: (event: string, fn: (err: Error) => void) => void;
+    write: (body: string) => void;
+    end: () => void;
+    destroy: (err?: Error) => void;
+  };
+};
+
+function errorText(error: unknown) {
+  if (!(error instanceof Error)) return String(error);
+  const cause = "cause" in error ? error.cause : undefined;
+  const extra = cause instanceof Error ? cause.message : cause ? String(cause) : "";
+  return extra ? `${error.message}: ${extra}` : error.message;
+}
+
+function loadNodeHttps(): NodeHttps | undefined {
+  try {
+    const loader = (process as NodeJS.Process & { getBuiltinModule?: (name: string) => NodeHttps }).getBuiltinModule;
+    if (typeof loader !== "function") return undefined;
+    return loader("node:https");
+  } catch {
+    return undefined;
+  }
+}
+
+function postJsonNode(urlString: string, body: unknown, secret?: string): Promise<{ status: number; text: string }> {
+  const https = loadNodeHttps();
+  if (!https) return Promise.reject(new Error("node:https is not available"));
+  const url = new URL(urlString);
+  const payload = JSON.stringify(body);
+  const bytes = typeof Buffer === "undefined" ? new TextEncoder().encode(payload) : Buffer.from(payload);
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: `${url.pathname}${url.search}`,
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": String(bytes.byteLength),
+        "user-agent": "SDDP-Apartment/1.0",
+        ...(secret ? { "x-sddp-webhook-secret": secret } : {}),
+      },
+    }, (res) => {
+      const chunks: string[] = [];
+      res.on("data", (chunk) => chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8")));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, text: chunks.join("") }));
+    });
+    req.setTimeout(20_000, () => req.destroy(new Error("n8n webhook timed out")));
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function postJsonFetch(urlString: string, body: unknown, secret?: string) {
+  const response = await fetch(urlString, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "SDDP-Apartment/1.0",
+      ...(secret ? { "x-sddp-webhook-secret": secret } : {}),
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const text = await response.text().catch(() => "");
+  return { status: response.status, text };
+}
+
 export async function notifyInquiryN8n(record: InquiryMailRecord): Promise<InquiryMailResult> {
   const runtime = bindings();
   const url = (runtime.N8N_INQUIRY_WEBHOOK || N8N_INQUIRY_WEBHOOK).trim();
@@ -38,25 +114,16 @@ export async function notifyInquiryN8n(record: InquiryMailRecord): Promise<Inqui
   };
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "SDDP-Apartment/1.0",
-        ...(secret ? { "x-sddp-webhook-secret": secret } : {}),
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      console.error("SDDP n8n inquiry webhook failed", response.status, text.slice(0, 300));
-      return { routed: false, error: `n8n HTTP ${response.status}` };
+    const result = loadNodeHttps()
+      ? await postJsonNode(url, payload, secret)
+      : await postJsonFetch(url, payload, secret);
+    if (result.status < 200 || result.status >= 300) {
+      console.error("SDDP n8n inquiry webhook failed", result.status, result.text.slice(0, 300));
+      return { routed: false, error: `n8n HTTP ${result.status}` };
     }
     return { routed: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "n8n fetch failed";
     console.error("SDDP n8n inquiry webhook error", error);
-    return { routed: false, error: message };
+    return { routed: false, error: errorText(error) };
   }
 }
