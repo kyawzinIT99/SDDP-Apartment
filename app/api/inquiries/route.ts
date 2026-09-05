@@ -6,8 +6,42 @@ import { defaultSiteSettings, type SiteSettings } from "../../lib/site-defaults"
 import { bindings, ensureSchema } from "../../lib/storage";
 
 type InquiryInput = { name?: string; phone?: string; email?: string; channel?: string; stayType?: string; roomNumber?: string; arrivalDate?: string; message?: string; locale?: string };
-type InquiryPatch = { id?: string; status?: string; notes?: string };
+type InquiryPatch = { id?: string; status?: string; notes?: string; sendMail?: boolean };
 const pipeline = ["new", "contacted", "booked", "deposit", "lost", "converted"] as const;
+const N8N_INQUIRY_WEBHOOK_DEFAULT = "https://n8n-al8a.srv1707349.hstgr.cloud/webhook/sddp-inquiry-alert";
+
+type InquiryRecord = {
+  id: string; name: string; phone: string; email: string; channel: string; stayType: string;
+  roomNumber: string; arrivalDate: string; message: string; locale: string; createdAt: number;
+};
+
+async function notifyInquiryN8n(record: InquiryRecord) {
+  const runtime = bindings();
+  const webhook = runtime.N8N_INQUIRY_WEBHOOK || N8N_INQUIRY_WEBHOOK_DEFAULT;
+  if (!webhook) return false;
+  const row = await runtime.DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
+  const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
+  const site = { ...defaultSiteSettings, ...saved };
+  const payload = {
+    event: "sddp.inquiry.created",
+    ...record,
+    lineId: site.lineId,
+    phonePrimary: site.phonePrimary,
+    bankName: site.bankName,
+    bankAccountName: site.bankAccountName,
+    bankAccountNumber: site.bankAccountNumber,
+    bankPromptPay: site.bankPromptPay,
+    monthlyPrice: site.monthlyPrice,
+    monthlyDeposit: site.monthlyDeposit,
+    site: "https://sddp-apartment.onrender.com",
+  };
+  const response = await fetch(webhook, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify(payload) });
+  if (!response.ok) {
+    console.error("SDDP n8n inquiry webhook failed", response.status, await response.text().catch(() => ""));
+    return false;
+  }
+  return true;
+}
 
 export async function POST(request: Request) {
   const input = await request.json() as InquiryInput;
@@ -24,32 +58,10 @@ export async function POST(request: Request) {
   await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
     .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
   let routed = false;
-  const webhook = runtime.N8N_INQUIRY_WEBHOOK;
-  if (webhook) {
-    try {
-      const row = await runtime.DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
-      const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
-      const site = { ...defaultSiteSettings, ...saved };
-      const payload = {
-        event: "sddp.inquiry.created",
-        ...record,
-        lineId: site.lineId,
-        phonePrimary: site.phonePrimary,
-        bankName: site.bankName,
-        bankAccountName: site.bankAccountName,
-        bankAccountNumber: site.bankAccountNumber,
-        bankPromptPay: site.bankPromptPay,
-        monthlyPrice: site.monthlyPrice,
-        monthlyDeposit: site.monthlyDeposit,
-        site: "https://sddp-apartment.onrender.com",
-      };
-      const response = await fetch(webhook, { method: "POST", headers: { "content-type": "application/json", ...(runtime.N8N_WEBHOOK_SECRET ? { "x-sddp-webhook-secret": runtime.N8N_WEBHOOK_SECRET } : {}) }, body: JSON.stringify(payload) });
-      routed = response.ok;
-      if (!response.ok) console.error("SDDP n8n inquiry webhook failed", response.status, await response.text().catch(() => ""));
-    } catch (error) {
-      console.error("SDDP n8n inquiry webhook error", error);
-      routed = false;
-    }
+  try {
+    routed = await notifyInquiryN8n(record);
+  } catch (error) {
+    console.error("SDDP n8n inquiry webhook error", error);
   }
   return Response.json({ ok: true, inquiryId: record.id, routed }, { status: 201 });
 }
@@ -81,8 +93,24 @@ export async function PATCH(request: Request) {
   const status = pipeline.includes(input.status as typeof pipeline[number]) ? input.status : undefined;
   const notes = input.notes?.slice(0, 2000);
   const { DB } = bindings(); await ensureSchema(DB!);
-  const current = await DB!.prepare("SELECT id, room_number AS roomNumber, status FROM inquiries WHERE id = ?").bind(id).first<{ id: string; roomNumber: string; status: string }>();
+  const current = await DB!.prepare("SELECT id, name, phone, email, channel, stay_type AS stayType, room_number AS roomNumber, arrival_date AS arrivalDate, message, locale, status, created_at AS createdAt FROM inquiries WHERE id = ?").bind(id).first<{
+    id: string; name: string; phone: string; email: string; channel: string; stayType: string; roomNumber: string; arrivalDate: string; message: string; locale: string; status: string; createdAt: number;
+  }>();
   if (!current) return Response.json({ error: "Inquiry not found" }, { status: 404 });
+  if (input.sendMail) {
+    if (!current.email) return Response.json({ error: "This inquiry has no email address" }, { status: 400 });
+    let routed = false;
+    try {
+      routed = await notifyInquiryN8n({
+        id: current.id, name: current.name, phone: current.phone, email: current.email, channel: current.channel,
+        stayType: current.stayType, roomNumber: current.roomNumber, arrivalDate: current.arrivalDate || "",
+        message: current.message || "", locale: current.locale, createdAt: current.createdAt,
+      });
+    } catch (error) {
+      console.error("SDDP n8n inquiry webhook error", error);
+    }
+    return Response.json({ ok: routed, id, routed });
+  }
   if (status) {
     await DB!.prepare("UPDATE inquiries SET status = ?, updated_at = ? WHERE id = ?").bind(status, Date.now(), id).run();
     if (status === "deposit") {

@@ -177,6 +177,13 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     setInquiries((current) => current.map((item) => item.id === id ? { ...item, notes } : item));
     setStatus("Staff note saved");
   }
+  async function sendInquiryMail(item: Inquiry) {
+    if (!item.email) { setStatus("This inquiry has no email address"); return; }
+    setStatus(`Sending deposit email to ${item.email}…`);
+    const response = await fetch("/api/inquiries", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: item.id, sendMail: true }) });
+    const result = await response.json().catch(() => ({}));
+    setStatus(result.routed ? `Deposit email sent to ${item.email}` : "Email send failed — check n8n SDDP Inquiry Alert is active");
+  }
   function startConvert(inquiry: Inquiry) {
     setConverting(inquiry.id);
     setResidentDraft({
@@ -379,6 +386,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
               <time>{new Date(item.createdAt).toLocaleString()}</time>
               <div className="pipeline-actions">{pipeline.filter((step) => step.id !== "converted").map((step) => <button type="button" key={step.id} disabled={item.status === "converted"} className={`${item.status === step.id ? "active" : ""}${step.id === "deposit" ? " deposit-btn" : ""}`} onClick={() => setInquiryStatus(item.id, step.id)}>{step.label}</button>)}
                 {item.status !== "converted" && <button type="button" className="convert" onClick={() => startConvert(item)}>Move in</button>}
+                {item.email && <button type="button" className="resident-action" onClick={() => sendInquiryMail(item)}>Send deposit email</button>}
               </div>
               {item.status === "deposit" && item.roomNumber && <p className="deposit-notice">🔒 Room {item.roomNumber} is held — showing occupied on the website. 50% deposit received. Move in when they arrive, or mark Lost to release the room.</p>}
               <label className="staff-note">Staff note<textarea defaultValue={item.notes ?? ""} rows={2} onBlur={(event) => { if (event.target.value !== (item.notes ?? "")) saveInquiryNotes(item.id, event.target.value); }} /></label>

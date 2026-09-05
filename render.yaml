@@ -24,6 +24,6 @@ services:
       - key: GUEST_DATA_ENCRYPTION_KEY
         sync: false
       - key: N8N_INQUIRY_WEBHOOK
-        sync: false
+        value: https://n8n-al8a.srv1707349.hstgr.cloud/webhook/sddp-inquiry-alert
       - key: N8N_WEBHOOK_SECRET
         sync: false
