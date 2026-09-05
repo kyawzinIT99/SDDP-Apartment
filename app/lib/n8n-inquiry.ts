@@ -2,6 +2,7 @@ import { defaultSiteSettings, type SiteSettings } from "./site-defaults";
 import { bindings } from "./storage";
 
 export const N8N_INQUIRY_WEBHOOK = "https://n8n-al8a.srv1707349.hstgr.cloud/webhook/sddp-inquiry-alert";
+export const MAIL_QUEUE_SECRET = "sddp-inquiry-mail-queue";
 
 export type InquiryMailRecord = {
   id: string; name: string; phone: string; email: string; channel: string; stayType: string;
@@ -86,16 +87,16 @@ async function postJsonFetch(urlString: string, body: unknown, secret?: string) 
   return { status: response.status, text };
 }
 
-export async function notifyInquiryN8n(record: InquiryMailRecord): Promise<InquiryMailResult> {
-  const runtime = bindings();
-  const url = (runtime.N8N_INQUIRY_WEBHOOK || N8N_INQUIRY_WEBHOOK).trim();
-  if (!url) return { routed: false, error: "n8n webhook is not configured" };
+export function mailQueueAuthorized(request: Request) {
+  return (request.headers.get("x-sddp-mail-secret") || "") === MAIL_QUEUE_SECRET;
+}
 
+export async function inquiryMailPayload(record: InquiryMailRecord) {
+  const runtime = bindings();
   const row = await runtime.DB!.prepare("SELECT value FROM site_settings WHERE id = ?").bind("public").first<{ value: string }>();
   const saved = row ? JSON.parse(row.value) as Partial<SiteSettings> : {};
   const site = { ...defaultSiteSettings, ...saved };
-  const secret = runtime.N8N_WEBHOOK_SECRET?.trim();
-  const payload = {
+  return {
     event: "sddp.inquiry.created",
     ...record,
     email: record.email,
@@ -112,6 +113,19 @@ export async function notifyInquiryN8n(record: InquiryMailRecord): Promise<Inqui
     monthlyDeposit: site.monthlyDeposit,
     site: "https://sddp-apartment.onrender.com",
   };
+}
+
+export async function markInquiryMailSent(id: string, sent: boolean) {
+  const runtime = bindings();
+  await runtime.DB!.prepare("UPDATE inquiries SET mail_sent = ?, updated_at = ? WHERE id = ?").bind(sent ? 1 : 0, Date.now(), id).run();
+}
+
+export async function notifyInquiryN8n(record: InquiryMailRecord): Promise<InquiryMailResult> {
+  const runtime = bindings();
+  const url = (runtime.N8N_INQUIRY_WEBHOOK || N8N_INQUIRY_WEBHOOK).trim();
+  if (!url) return { routed: false, error: "n8n webhook is not configured" };
+  const secret = runtime.N8N_WEBHOOK_SECRET?.trim();
+  const payload = await inquiryMailPayload(record);
 
   try {
     const result = loadNodeHttps()

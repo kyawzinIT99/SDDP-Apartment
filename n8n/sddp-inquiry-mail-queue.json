@@ -1,0 +1,236 @@
+{
+  "name": "SDDP Inquiry Mail Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "sddp-mail-cron",
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sddp-apartment.onrender.com/api/inquiries/mail-queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-sddp-mail-secret",
+              "value": "sddp-inquiry-mail-queue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sddp-mail-get",
+      "name": "Get waiting inquiries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const list = items[0].json.inquiries || [];\nif (!Array.isArray(list) || !list.length) return [];\n\nfunction esc(value) {\n  return String(value || \"\").replace(/[&<>\"]/g, (c) => ({ \"&\": \"&amp;\", \"<\": \"&lt;\", \">\": \"&gt;\", '\"': \"&quot;\" }[c]));\n}\n\nfunction build(body) {\n  const lineId = String(body.lineId || \"SDDP.Apartment\").replace(/^@/, \"\");\n  const bankName = body.bankName || \"\";\n  const bankAccountName = body.bankAccountName || \"\";\n  const bankAccountNumber = body.bankAccountNumber || \"\";\n  const bankPromptPay = body.bankPromptPay || \"\";\n  const staffEmail = body.alertEmail || body.staffEmail || \"sddpapartment@gmail.com\";\n  const phone = body.phonePrimary || \"094-293-5296\";\n  const deposit = body.monthlyDeposit || \"50% of first month\";\n  const email = String(body.email || body.guestEmail || \"\").trim();\n  const name = body.name || \"Guest\";\n  const roomNumber = body.roomNumber || \"—\";\n  const stayType = body.stayType || \"\";\n  const arrivalDate = body.arrivalDate || \"to be confirmed\";\n  const guestNote = body.message || \"\";\n  const site = body.site || \"https://sddp-apartment.onrender.com\";\n  const bankRows = [\n    bankName && [\"Bank\", bankName],\n    bankAccountName && [\"Account name\", bankAccountName],\n    bankAccountNumber && [\"Account number\", bankAccountNumber],\n    bankPromptPay && [\"PromptPay\", bankPromptPay],\n  ].filter(Boolean);\n  const bankHtml = bankRows.length\n    ? bankRows.map(([label, value]) => `<tr><td style=\"padding:9px 0;color:#6b6560;font-size:13px;width:42%\">${esc(label)}</td><td style=\"padding:9px 0;color:#1b1c1d;font-size:15px;font-weight:700;letter-spacing:.02em\">${esc(value)}</td></tr>`).join(\"\")\n    : `<tr><td colspan=\"2\" style=\"padding:9px 0;color:#6b6560;font-size:13px\">Our team will confirm bank details. Please send the transfer slip to Line @${esc(lineId)}.</td></tr>`;\n  const guestHtml = `<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>\n<body style=\"margin:0;background:#f3efe6;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#1b1c1d\">\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3efe6;padding:28px 12px\">\n    <tr><td align=\"center\">\n      <table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #e7e1d5\">\n        <tr><td style=\"background:#1b1c1d;padding:22px 28px\">\n          <div style=\"font-size:11px;letter-spacing:.18em;color:#ffd94f;font-weight:800\">SDDP APARTMENT</div>\n          <div style=\"font-size:22px;color:#fff;font-weight:700;margin-top:6px\">Your inquiry and deposit details</div>\n          <div style=\"font-size:13px;color:#c8c4bb;margin-top:6px\">San Kamphaeng, Chiang Mai</div>\n        </td></tr>\n        <tr><td style=\"padding:28px\">\n          <p style=\"margin:0 0 16px;font-size:15px;line-height:1.7\">Dear ${esc(name)},</p>\n          <p style=\"margin:0 0 18px;font-size:15px;line-height:1.7\">Thank you for your inquiry. We have received your request and our team will follow up shortly.</p>\n          <table role=\"presentation\" width=\"100%\" style=\"background:#f7f3eb;border-radius:12px;padding:4px 18px;margin:0 0 22px\">\n            <tr><td style=\"padding:10px 0;color:#6b6560;font-size:12px;text-transform:uppercase;letter-spacing:.08em\">Requested room</td><td style=\"padding:10px 0;text-align:right;font-weight:800;font-size:16px\">${esc(roomNumber)}</td></tr>\n            <tr><td style=\"padding:10px 0;border-top:1px solid #e7e1d5;color:#6b6560;font-size:12px;text-transform:uppercase;letter-spacing:.08em\">Stay type</td><td style=\"padding:10px 0;border-top:1px solid #e7e1d5;text-align:right;font-weight:700\">${esc(stayType || \"—\")}</td></tr>\n            <tr><td style=\"padding:10px 0;border-top:1px solid #e7e1d5;color:#6b6560;font-size:12px;text-transform:uppercase;letter-spacing:.08em\">Arrival</td><td style=\"padding:10px 0;border-top:1px solid #e7e1d5;text-align:right;font-weight:700\">${esc(arrivalDate)}</td></tr>\n          </table>\n          <div style=\"border-left:4px solid #ee302b;padding:4px 0 4px 14px;margin:0 0 22px\">\n            <div style=\"font-size:12px;letter-spacing:.12em;font-weight:800;color:#ee302b\">RESERVATION POLICY</div>\n            <p style=\"margin:8px 0 0;font-size:14px;line-height:1.7\">A <strong>50% deposit</strong> (${esc(deposit)}) is required to reserve this room. Standard rooms: <strong>฿2,000</strong>. VIP rooms: <strong>฿4,000</strong>.</p>\n            <p style=\"margin:10px 0 0;font-size:14px;line-height:1.7\">After the deposit is confirmed, the room is reserved and held for you. <strong>If you do not arrive, the deposit is not refunded.</strong></p>\n          </div>\n          <div style=\"font-size:12px;letter-spacing:.12em;font-weight:800;color:#1b1c1d;margin-bottom:8px\">BANK TRANSFER</div>\n          <table role=\"presentation\" width=\"100%\" style=\"margin:0 0 22px\">${bankHtml}</table>\n          <div style=\"background:#06c755;color:#fff;border-radius:12px;padding:16px 18px;margin:0 0 22px\">\n            <div style=\"font-size:12px;letter-spacing:.12em;font-weight:800\">SEND YOUR TRANSFER SLIP</div>\n            <p style=\"margin:8px 0 0;font-size:14px;line-height:1.6\">After transferring, send the payment slip to our Line account <strong>@${esc(lineId)}</strong>. The room is reserved only after we confirm the slip.</p>\n          </div>\n          ${guestNote ? `<p style=\"margin:0 0 18px;font-size:13px;color:#6b6560;line-height:1.6\"><strong>Your note:</strong> ${esc(guestNote)}</p>` : \"\"}\n          <p style=\"margin:0;font-size:14px;line-height:1.7\">Kind regards,<br><strong>SDDP Apartment</strong><br>${esc(phone)}</p>\n        </td></tr>\n        <tr><td style=\"background:#f7f3eb;padding:16px 28px;font-size:11px;color:#8a847c;line-height:1.6\">8/18 Moo 2, Ton Pao, San Kamphaeng, Chiang Mai 50130 · This is an automated reply to your website inquiry.</td></tr>\n      </table>\n    </td></tr>\n  </table>\n</body>\n</html>`;\n  const staffHtml = `<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;color:#1b1c1d;background:#f7f3eb;padding:24px\">\n  <div style=\"max-width:560px;margin:auto;background:#fff;border-radius:16px;padding:24px;border:1px solid #e7e1d5\">\n    <div style=\"font-size:11px;letter-spacing:.16em;color:#ee302b;font-weight:800\">NEW WEBSITE INQUIRY</div>\n    <h2 style=\"margin:8px 0 16px\">${esc(name)} · Room ${esc(roomNumber)}</h2>\n    <p><strong>Email:</strong> ${esc(email || \"—\")}<br><strong>Phone:</strong> ${esc(body.phone || \"—\")}<br><strong>Stay:</strong> ${esc(stayType)}<br><strong>Arrival:</strong> ${esc(arrivalDate)}</p>\n    <p>${esc(guestNote || \"No guest note\")}</p>\n    <p><a href=\"${esc(site)}/admin\">Open admin</a></p>\n  </div>\n</body></html>`;\n  return {\n    json: {\n      id: body.id,\n      email,\n      name,\n      roomNumber,\n      staffEmail,\n      hasGuestEmail: Boolean(email && email.includes(\"@\")),\n      guestHtml,\n      staffHtml,\n    },\n  };\n}\n\nreturn list.map(build);\n"
+      },
+      "id": "sddp-mail-build",
+      "name": "Build inquiry emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-guest-email",
+              "leftValue": "={{$json.hasGuestEmail}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "sddp-mail-if",
+      "name": "Has guest email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.email}}",
+        "subject": "=SDDP Apartment · Room {{$json.roomNumber}} · deposit to reserve",
+        "emailType": "html",
+        "message": "={{$json.guestHtml}}",
+        "options": {}
+      },
+      "id": "sddp-mail-guest",
+      "name": "Email guest confirmation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        980,
+        -140
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GujmZ013kyZd0wxv",
+          "name": "Pdf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.staffEmail}}",
+        "subject": "=SDDP inquiry · {{$json.name}} · Room {{$json.roomNumber}}",
+        "emailType": "html",
+        "message": "={{$json.staffHtml}}",
+        "options": {}
+      },
+      "id": "sddp-mail-staff",
+      "name": "Email SDDP staff",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        980,
+        140
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GujmZ013kyZd0wxv",
+          "name": "Pdf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sddp-apartment.onrender.com/api/inquiries/mail-queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-sddp-mail-secret",
+              "value": "sddp-inquiry-mail-queue"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"ids\":[\"{{$json.id}}\"]}",
+        "options": {}
+      },
+      "id": "sddp-mail-ack",
+      "name": "Mark inquiry mailed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        -140
+      ]
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Get waiting inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get waiting inquiries": {
+      "main": [
+        [
+          {
+            "node": "Build inquiry emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build inquiry emails": {
+      "main": [
+        [
+          {
+            "node": "Has guest email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email SDDP staff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has guest email": {
+      "main": [
+        [
+          {
+            "node": "Email guest confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email guest confirmation": {
+      "main": [
+        [
+          {
+            "node": "Mark inquiry mailed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

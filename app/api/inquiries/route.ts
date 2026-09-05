@@ -21,9 +21,10 @@ export async function POST(request: Request) {
   if (!configuredAvailable.has(roomNumber) || occupied.has(roomNumber)) return Response.json({ error: "That room is now occupied. Please choose an available room.", code: "room_unavailable", roomNumber, availableRooms }, { status: 409 });
   const now = Date.now();
   const record = { id: crypto.randomUUID(), name: input.name.trim().slice(0, 120), phone: input.phone.trim().slice(0, 80), email: input.email?.trim().toLowerCase().slice(0, 160) ?? "", channel: input.channel ?? "phone", stayType: input.stayType ?? "monthly", roomNumber, arrivalDate: input.arrivalDate ?? "", message: input.message?.trim().slice(0, 1000) ?? "", locale: input.locale ?? "en", createdAt: now };
-  await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?)")
+  await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at, mail_sent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?, 0)")
     .bind(record.id, record.name, record.phone, record.email, record.channel, record.stayType, record.roomNumber, record.arrivalDate, record.message, record.locale, now, now).run();
   const mail = await notifyInquiryN8n(record);
+  if (mail.routed) await runtime.DB!.prepare("UPDATE inquiries SET mail_sent = 1, updated_at = ? WHERE id = ?").bind(Date.now(), record.id).run();
   return Response.json({ ok: true, inquiryId: record.id, routed: mail.routed, mailError: mail.error ?? null }, { status: 201 });
 }
 
@@ -65,6 +66,7 @@ export async function PATCH(request: Request) {
       stayType: current.stayType, roomNumber: current.roomNumber, arrivalDate: current.arrivalDate || "",
       message: current.message || "", locale: current.locale, createdAt: current.createdAt,
     });
+    await DB!.prepare("UPDATE inquiries SET mail_sent = ?, updated_at = ? WHERE id = ?").bind(mail.routed ? 1 : 0, Date.now(), id).run();
     return Response.json({ ok: mail.routed, id, routed: mail.routed, mailError: mail.error ?? null });
   }
   if (status) {
