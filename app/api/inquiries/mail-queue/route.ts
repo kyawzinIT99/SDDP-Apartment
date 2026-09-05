@@ -1,5 +1,5 @@
-import { inquiryMailPayload, mailQueueAuthorized, type InquiryMailRecord } from "../../lib/n8n-inquiry";
-import { bindings, ensureSchema } from "../../lib/storage";
+import { inquiryMailPayload, mailQueueAuthorized, type InquiryMailRecord } from "../../../lib/n8n-inquiry";
+import { bindings, ensureSchema } from "../../../lib/storage";
 
 type QueueRow = {
   id: string; name: string; phone: string; email: string; channel: string; stayType: string;
