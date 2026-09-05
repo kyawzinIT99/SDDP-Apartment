@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   for (const row of claimed) {
     inquiries.push(await inquiryMailPayload(row as InquiryMailRecord));
   }
-  return Response.json({ inquiries });
+  return Response.json({ inquiries, claim: true });
 }
 
 export async function POST(request: Request) {
