@@ -1,14 +1,14 @@
 import { initialAvailableRoomNumbers, normalizeRoomNumber, roomCatalog } from "./rooms";
 import type { D1Database } from "./storage";
 
-// v3 resets the corrected occupied inventory once, then preserves all later
-// changes made by staff and by the resident/deposit workflow.
-const SETTING_ID = "room_availability_v3";
+// v4 ignores the old manager allow-list so empty rooms are not shown as
+// occupied when Private Directory has no current resident for them.
+const SETTING_ID = "room_availability_v4";
 const catalogNumbers = new Set(roomCatalog.map((room) => room.roomNumber));
 
 export async function configuredAvailableRooms(DB: D1Database) {
   const row = await DB.prepare("SELECT value FROM site_settings WHERE id = ?").bind(SETTING_ID).first<{ value: string }>();
-  if (!row?.value) return new Set(initialAvailableRoomNumbers);
+  if (!row?.value) return new Set(roomCatalog.map((room) => room.roomNumber));
   try {
     const values = JSON.parse(row.value);
     return new Set(Array.isArray(values)

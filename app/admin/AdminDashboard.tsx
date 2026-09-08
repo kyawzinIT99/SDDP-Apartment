@@ -21,6 +21,12 @@ function emptyResident(): ResidentDraft {
   return { fullName: "", phone: "", email: "", nationality: "", residentType: "monthly", passportNumber: "", roomNumber: "", checkInDate: todayISO(), checkOutDate: "", consentConfirmed: false };
 }
 const editableCopy = ["eyebrow", "title", "intro", "essentials", "gallery", "gallerySub", "inquiryTitle", "inquirySub", "locationTitle"];
+function compactPages(current: number, total: number) {
+  const count = Math.min(3, Math.max(1, total));
+  const start = Math.min(Math.max(1, current - 1), Math.max(1, total - count + 1));
+  return Array.from({ length: count }, (_, index) => start + index);
+}
+
 const pipeline: { id: PipelineStatus; label: string }[] = [
   { id: "new", label: "New" },
   { id: "contacted", label: "Contacted" },
@@ -46,6 +52,9 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
   const [inquiryPage, setInquiryPage] = useState(1);
   const INQUIRY_PAGE_SIZE = 5;
   const [residentFilter, setResidentFilter] = useState<"active" | "checked_out" | "all">("active");
+  const [residentPage, setResidentPage] = useState(1);
+  const RESIDENT_PAGE_SIZE = 6;
+  const [roomPage, setRoomPage] = useState(1);
   const [converting, setConverting] = useState<string>("");
   const [invoiceSeed, setInvoiceSeed] = useState<{ fullName: string; roomNumber: string; nationality: string } | null>(null);
   const [historyOpen, setHistoryOpen] = useState<string | null>(null);
@@ -105,6 +114,19 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     }
   }
   const visibleResidents = useMemo(() => residents.filter((item) => residentFilter === "all" || item.status === residentFilter), [residents, residentFilter]);
+  const residentPageCount = Math.max(1, Math.ceil(visibleResidents.length / RESIDENT_PAGE_SIZE));
+  const residentPageSafe = Math.min(residentPage, residentPageCount);
+  const pagedResidents = visibleResidents.slice((residentPageSafe - 1) * RESIDENT_PAGE_SIZE, residentPageSafe * RESIDENT_PAGE_SIZE);
+  function setResidentView(id: "active" | "checked_out" | "all") { setResidentFilter(id); setResidentPage(1); }
+  const roomsByFloor = roomBoard.reduce<Record<string, RoomStatus[]>>((groups, room) => { (groups[room.floor] ??= []).push(room); return groups; }, {});
+  const roomPages: { page: number; floors: string[] }[] = [
+    { page: 1, floors: ["1"] },
+    { page: 2, floors: ["2"] },
+    { page: 3, floors: ["3", "4", "Other"] },
+  ];
+  const visibleRoomFloors = (roomPages.find((item) => item.page === roomPage) ?? roomPages[0]).floors
+    .filter((floor) => roomsByFloor[floor]?.length)
+    .map((floor) => [floor, roomsByFloor[floor]] as const);
 
   function field<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) { setSettings((current) => ({ ...current, [key]: value })); setStatus("Unsaved changes"); }
   function copyField(key: string, value: string) { setSettings((current) => ({ ...current, copy: { ...current.copy, [locale]: { ...(current.copy[locale] ?? {}), [key]: value } } })); setStatus("Unsaved changes"); }
@@ -116,21 +138,14 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
     setRoomBoard(Array.isArray(rooms.rooms) ? rooms.rooms : []);
     setAvailableCount((rooms.rooms ?? []).filter((room: { status: string }) => room.status === "available").length);
   }
-  function toggleRoomStatus(roomNumber: string) {
-    setRoomBoard((current) => current.map((room) => room.roomNumber === roomNumber
-      ? { ...room, status: room.status === "available" ? "occupied" : "available" }
-      : room));
-    setStatus("Unsaved room changes");
-  }
-  async function saveRoomStatuses() {
-    setStatus("Saving room availability…");
-    const availableRoomNumbers = roomBoard.filter((room) => room.status === "available").map((room) => room.roomNumber);
-    const response = await fetch("/api/rooms", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ availableRoomNumbers }) });
+  async function syncRoomsFromDirectory() {
+    setStatus("Syncing rooms from Private Directory…");
+    const response = await fetch("/api/rooms", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ availableRoomNumbers: [] }) });
     const result = await response.json().catch(() => ({ rooms: [] }));
-    if (!response.ok) { setStatus(result.error ?? "Room availability save failed"); return; }
+    if (!response.ok) { setStatus(result.error ?? "Room sync failed"); return; }
     setRoomBoard(Array.isArray(result.rooms) ? result.rooms : []);
     setAvailableCount((result.rooms ?? []).filter((room: RoomStatus) => room.status === "available").length);
-    setStatus("Room availability published to the website");
+    setStatus("Public rooms now match Private Directory and deposit holds");
   }
   async function addResident(event: FormEvent) {
     event.preventDefault(); setStatus("Saving resident securely…");
@@ -350,9 +365,15 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
       </div>}
 
       {tab === "rooms" && <section className="editor-card wide admin-room-editor">
-        <div className="card-head"><div><span>LIVE INVENTORY</span><h2>Choose the rooms guests can book</h2><p>Green rooms are available on the public website. Red rooms are occupied. Active residents and confirmed deposits always keep their room occupied.</p></div><b>{roomBoard.filter((room) => room.status === "available").length} available</b></div>
-        <div className="floor-list">{Object.entries(roomBoard.reduce<Record<string, RoomStatus[]>>((groups, room) => { (groups[room.floor] ??= []).push(room); return groups; }, {})).map(([floor, rooms]) => <section className="floor-card" key={floor}><header><span>Floor</span><b>{floor}</b><small>{rooms.filter((room) => room.status === "available").length}/{rooms.length} available</small></header><div className="room-grid">{rooms.map((room) => <button type="button" key={room.roomNumber} className={`room-status ${room.status}`} onClick={() => toggleRoomStatus(room.roomNumber)}><b>{room.roomNumber}</b><span><i />{room.status === "available" ? "Available" : "Occupied"}</span></button>)}</div></section>)}</div>
-        <button className="admin-save" type="button" onClick={saveRoomStatuses}>Publish room availability <b>↗</b></button>
+        <div className="card-head"><div><span>LIVE INVENTORY</span><h2>Rooms follow Private Directory</h2><p>Occupied rooms are only current residents and rooms held by a confirmed deposit. Empty rooms stay available. Add or check out a resident to change the public website.</p></div><b>{roomBoard.filter((room) => room.status === "available").length} available</b></div>
+        <div className="floor-list">{visibleRoomFloors.map(([floor, rooms]) => <section className="floor-card" key={floor}><header><span>Floor</span><b>{floor}</b><small>{rooms.filter((room) => room.status === "available").length}/{rooms.length} available</small></header><div className="room-grid">{rooms.map((room) => <div key={room.roomNumber} className={`room-status ${room.status}`}><b>{room.roomNumber}</b><span><i />{room.status === "available" ? "Available" : "Occupied"}</span></div>)}</div></section>)}</div>
+        <nav className="pagination">
+          <button type="button" className="page-arrow" disabled={roomPage === 1} onClick={() => setRoomPage((p) => p - 1)}>‹</button>
+          {[1, 2, 3].map((n) => <button type="button" key={n} className={`page-num${n === roomPage ? " active" : ""}`} onClick={() => setRoomPage(n)}>{n}</button>)}
+          <button type="button" className="page-arrow" disabled={roomPage === 3} onClick={() => setRoomPage((p) => p + 1)}>›</button>
+          <small>Page {roomPage} of 3 · {roomPage === 1 ? "Floor 1" : roomPage === 2 ? "Floor 2" : "Floors 3–4"}</small>
+        </nav>
+        <button className="admin-save" type="button" onClick={syncRoomsFromDirectory}>Sync from Private Directory <b>↗</b></button>
       </section>}
 
       {tab === "content" && <form className="editor-grid" onSubmit={save}>
@@ -393,7 +414,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
             </article>)}
             {inquiryPageCount > 1 && <nav className="pagination">
               <button type="button" className="page-arrow" disabled={inquiryPageSafe === 1} onClick={() => setInquiryPage((p) => p - 1)}>‹</button>
-              {Array.from({ length: inquiryPageCount }, (_, i) => i + 1).map((n) => (
+              {compactPages(inquiryPageSafe, inquiryPageCount).map((n) => (
                 <button type="button" key={n} className={`page-num${n === inquiryPageSafe ? " active" : ""}`} onClick={() => setInquiryPage(n)}>{n}</button>
               ))}
               <button type="button" className="page-arrow" disabled={inquiryPageSafe === inquiryPageCount} onClick={() => setInquiryPage((p) => p + 1)}>›</button>
@@ -422,9 +443,9 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
         </form>
         <section className="editor-card resident-list">
           <div className="card-head"><div><span>PRIVATE DIRECTORY</span><h2>Current resident records</h2></div>
-            <div className="locale-tabs">{(["active", "checked_out", "all"] as const).map((id) => <button type="button" key={id} className={residentFilter === id ? "active" : ""} onClick={() => setResidentFilter(id)}>{id === "checked_out" ? "Checked out" : id === "all" ? "All" : "Active"}</button>)}</div>
+            <div className="locale-tabs">{(["active", "checked_out", "all"] as const).map((id) => <button type="button" key={id} className={residentFilter === id ? "active" : ""} onClick={() => setResidentView(id)}>{id === "checked_out" ? "Checked out" : id === "all" ? "All" : "Active"}</button>)}</div>
           </div>
-          {visibleResidents.length === 0 ? <div className="empty-state"><b>No residents in this view</b><p>Add a resident or convert a booked inquiry.</p></div> : visibleResidents.map((resident) => <article key={resident.id}>
+          {visibleResidents.length === 0 ? <div className="empty-state"><b>No residents in this view</b><p>Add a resident or convert a booked inquiry.</p></div> : pagedResidents.map((resident) => <article key={resident.id}>
             <div><b>{resident.fullName}</b><small>{resident.nationality || "Nationality not set"} · {resident.residentType}</small></div>
             <div><b>Room {resident.roomNumber || "—"}</b><small>{resident.phone || resident.email || "No contact supplied"}</small></div>
             <div><b>{resident.passportLast4 ? `Passport •••• ${resident.passportLast4}` : "No passport stored"}</b><small>{resident.checkInDate ? `In: ${resident.checkInDate}` : "No check-in date"}{resident.checkOutDate ? ` · Out: ${resident.checkOutDate}` : ""}</small></div>
@@ -438,6 +459,14 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
               <button type="button" className="resident-action" onClick={() => setEditingDates(null)}>Cancel</button>
             </div>}
           </article>)}
+          {residentPageCount > 1 && <nav className="pagination">
+            <button type="button" className="page-arrow" disabled={residentPageSafe === 1} onClick={() => setResidentPage((p) => p - 1)}>‹</button>
+            {compactPages(residentPageSafe, residentPageCount).map((n) => (
+              <button type="button" key={n} className={`page-num${n === residentPageSafe ? " active" : ""}`} onClick={() => setResidentPage(n)}>{n}</button>
+            ))}
+            <button type="button" className="page-arrow" disabled={residentPageSafe === residentPageCount} onClick={() => setResidentPage((p) => p + 1)}>›</button>
+            <small>{(residentPageSafe - 1) * RESIDENT_PAGE_SIZE + 1}–{Math.min(residentPageSafe * RESIDENT_PAGE_SIZE, visibleResidents.length)} of {visibleResidents.length}</small>
+          </nav>}
         </section>
       </div>}
 
@@ -488,7 +517,7 @@ export default function AdminDashboard({ displayName, role }: { displayName: str
           })}
           {historyPageCount > 1 && <nav className="pagination">
             <button type="button" className="page-arrow" disabled={historyPageSafe === 1} onClick={() => setHistoryPage((p) => p - 1)}>‹</button>
-            {Array.from({ length: historyPageCount }, (_, i) => i + 1).map((n) => (
+            {compactPages(historyPageSafe, historyPageCount).map((n) => (
               <button type="button" key={n} className={`page-num${n === historyPageSafe ? " active" : ""}`} onClick={() => setHistoryPage(n)}>{n}</button>
             ))}
             <button type="button" className="page-arrow" disabled={historyPageSafe === historyPageCount} onClick={() => setHistoryPage((p) => p + 1)}>›</button>

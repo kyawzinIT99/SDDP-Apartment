@@ -31,15 +31,9 @@ export const roomCatalog: RoomDefinition[] = [
   { roomNumber: "VIP3", floor: "4", sortOrder: 4903 },
 ];
 
-// Current occupied inventory confirmed by SDDP staff. This is used until the
-// room-status editor or the resident workflow records a later change.
-export const initialOccupiedRoomNumbers = [
-  "202", "203", "207", "301", "303", "305", "307", "312", "315", "405",
-];
-const initialOccupiedRooms = new Set(initialOccupiedRoomNumbers);
-export const initialAvailableRoomNumbers = roomCatalog
-  .map((room) => room.roomNumber)
-  .filter((roomNumber) => !initialOccupiedRooms.has(roomNumber));
+// Empty rooms stay available until Private Directory or a deposit hold occupies them.
+export const initialOccupiedRoomNumbers: string[] = [];
+export const initialAvailableRoomNumbers = roomCatalog.map((room) => room.roomNumber);
 
 export function normalizeRoomNumber(value: string): string {
   const compact = value.trim().toUpperCase().replace(/\s+/g, "");
@@ -59,7 +53,7 @@ export function inferFloor(roomNumber: string): string {
 export type PublicRoomStatus = "available" | "occupied" | "unknown";
 export type PublicRoom = { roomNumber: string; floor: string; status: PublicRoomStatus };
 
-export function publicRoomBoard(occupied: Set<string>, connected: boolean, configuredAvailable?: Set<string>): PublicRoom[] {
+export function publicRoomBoard(occupied: Set<string>, connected: boolean): PublicRoom[] {
   const masterNumbers = new Set(roomCatalog.map((room) => room.roomNumber));
   const extra = [...occupied]
     .filter((roomNumber) => !masterNumbers.has(roomNumber))
@@ -69,9 +63,7 @@ export function publicRoomBoard(occupied: Set<string>, connected: boolean, confi
     .map((room) => ({
       roomNumber: room.roomNumber,
       floor: room.floor,
-      status: connected
-        ? (occupied.has(room.roomNumber) || (configuredAvailable && !configuredAvailable.has(room.roomNumber)) ? "occupied" : "available")
-        : "unknown",
+      status: connected ? (occupied.has(room.roomNumber) ? "occupied" : "available") : "unknown",
     }));
 }
 

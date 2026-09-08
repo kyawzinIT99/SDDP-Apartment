@@ -1,6 +1,6 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { occupiedRoomSet } from "../../lib/occupancy";
-import { configuredAvailableRooms, setConfiguredRoomAvailability } from "../../lib/room-availability";
+import { setConfiguredRoomAvailability } from "../../lib/room-availability";
 import { normalizeRoomNumber, roomCatalog } from "../../lib/rooms";
 import { notifyInquiryN8n } from "../../lib/n8n-inquiry";
 import { bindings, ensureSchema } from "../../lib/storage";
@@ -16,9 +16,9 @@ export async function POST(request: Request) {
   if (!roomNumber) return Response.json({ error: "Please select an available room", code: "room_required" }, { status: 400 });
   if (!roomCatalog.some((room) => room.roomNumber === roomNumber)) return Response.json({ error: "Please select a valid room", code: "invalid_room" }, { status: 400 });
   const runtime = bindings(); await ensureSchema(runtime.DB!);
-  const [occupied, configuredAvailable] = await Promise.all([occupiedRoomSet(runtime.DB!), configuredAvailableRooms(runtime.DB!)]);
-  const availableRooms = roomCatalog.map((room) => room.roomNumber).filter((room) => configuredAvailable.has(room) && !occupied.has(room));
-  if (!configuredAvailable.has(roomNumber) || occupied.has(roomNumber)) return Response.json({ error: "That room is now occupied. Please choose an available room.", code: "room_unavailable", roomNumber, availableRooms }, { status: 409 });
+  const occupied = await occupiedRoomSet(runtime.DB!);
+  const availableRooms = roomCatalog.map((room) => room.roomNumber).filter((room) => !occupied.has(room));
+  if (occupied.has(roomNumber)) return Response.json({ error: "That room is now occupied. Please choose an available room.", code: "room_unavailable", roomNumber, availableRooms }, { status: 409 });
   const now = Date.now();
   const record = { id: crypto.randomUUID(), name: input.name.trim().slice(0, 120), phone: input.phone.trim().slice(0, 80), email: input.email?.trim().toLowerCase().slice(0, 160) ?? "", channel: input.channel ?? "phone", stayType: input.stayType ?? "monthly", roomNumber, arrivalDate: input.arrivalDate ?? "", message: input.message?.trim().slice(0, 1000) ?? "", locale: input.locale ?? "en", createdAt: now };
   await runtime.DB!.prepare("INSERT INTO inquiries (id, name, phone, email, channel, stay_type, room_number, arrival_date, message, locale, status, notes, converted_resident_id, created_at, updated_at, mail_sent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', '', '', ?, ?, 0)")

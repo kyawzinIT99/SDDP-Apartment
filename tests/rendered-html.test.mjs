@@ -73,7 +73,9 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
   assert.match(roomsApi, /source: "database"/);
   assert.match(roomsApi, /availableRoomNumbers/);
-  assert.match(admin, /Publish room availability/);
+  assert.match(admin, /Sync from Private Directory/);
+  assert.match(admin, /compactPages/);
+  assert.match(admin, /Page \{roomPage\} of 3/);
   assert.doesNotMatch(storage, /cloudflare:workers/);
   assert.match(storage, /nodeSqliteAvailable|nodeBindings/);
   assert.match(storage, /\/var\/data\/sddp\.sqlite/);

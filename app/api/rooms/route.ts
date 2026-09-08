@@ -1,19 +1,16 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { bindings, ensureSchema } from "../../lib/storage";
 import { occupiedRoomSet } from "../../lib/occupancy";
-import { configuredAvailableRooms, saveConfiguredAvailableRooms } from "../../lib/room-availability";
-import { catalogBoard, publicRoomBoard } from "../../lib/rooms";
+import { saveConfiguredAvailableRooms } from "../../lib/room-availability";
+import { catalogBoard, publicRoomBoard, roomCatalog } from "../../lib/rooms";
 
 const noStore = { "Cache-Control": "no-store, max-age=0" };
 
 async function roomResponse() {
   const { DB } = bindings();
   await ensureSchema(DB!);
-  const [occupied, configuredAvailable] = await Promise.all([
-    occupiedRoomSet(DB!),
-    configuredAvailableRooms(DB!),
-  ]);
-  const rooms = publicRoomBoard(occupied, true, configuredAvailable);
+  const occupied = await occupiedRoomSet(DB!);
+  const rooms = publicRoomBoard(occupied, true);
   return { updatedAt: Date.now(), source: "database", managed: true, rooms };
 }
 
@@ -25,16 +22,13 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH() {
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
-  const input = await request.json() as { availableRoomNumbers?: unknown };
-  if (!Array.isArray(input.availableRoomNumbers)) {
-    return Response.json({ error: "Available room numbers are required" }, { status: 400 });
-  }
-
   const { DB } = bindings();
   await ensureSchema(DB!);
-  await saveConfiguredAvailableRooms(DB!, input.availableRoomNumbers.map(String), user.email);
+  const occupied = await occupiedRoomSet(DB!);
+  const availableRoomNumbers = roomCatalog.map((room) => room.roomNumber).filter((roomNumber) => !occupied.has(roomNumber));
+  await saveConfiguredAvailableRooms(DB!, availableRoomNumbers, user.email);
   return Response.json(await roomResponse(), { headers: noStore });
 }
