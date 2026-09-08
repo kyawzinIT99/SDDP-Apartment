@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { initialAvailableRoomNumbers, initialOccupiedRoomNumbers, publicRoomBoard, roomCatalog } from "../app/lib/rooms.ts";
+import { catalogRoomFromValue, initialAvailableRoomNumbers, initialOccupiedRoomNumbers, publicRoomBoard, roomCatalog } from "../app/lib/rooms.ts";
 
 test("uses the exact staff-confirmed catalog and no seed occupied rooms", () => {
   const board = publicRoomBoard(new Set(), true);
@@ -15,6 +15,12 @@ test("uses the exact staff-confirmed catalog and no seed occupied rooms", () => 
   ]);
   assert.deepEqual(initialOccupiedRoomNumbers, []);
   assert.deepEqual(initialAvailableRoomNumbers, roomCatalog.map((room) => room.roomNumber));
+});
+
+test("reads a catalog room from a resident name when the room field is blank", () => {
+  assert.equal(catalogRoomFromValue("", "405", "405"), "405");
+  assert.equal(catalogRoomFromValue("", "315", "35"), "315");
+  assert.equal(catalogRoomFromValue("", "Guest Name", "0942935296"), "");
 });
 
 test("an active resident or deposit occupies a room; empty rooms stay available", () => {

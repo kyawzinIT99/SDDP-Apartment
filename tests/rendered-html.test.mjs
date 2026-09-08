@@ -69,9 +69,10 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(crypto, /SHA-256/);
   assert.match(crypto, /tryDecodeBase64/);
   assert.match(residentApi, /Invalid character/);
-  assert.match(occupancy, /SELECT room_number FROM residents/);
+  assert.match(occupancy, /SELECT room_number, full_name, phone FROM residents/);
   assert.match(occupancy, /status != 'checked_out'/);
-  assert.doesNotMatch(occupancy, /full_name|passport|email|phone/);
+  assert.match(occupancy, /catalogRoomFromValue/);
+  assert.doesNotMatch(occupancy, /passport|email/);
   assert.match(roomsApi, /source: "database"/);
   assert.match(roomsApi, /availableRoomNumbers/);
   assert.match(admin, /Sync from Private Directory/);

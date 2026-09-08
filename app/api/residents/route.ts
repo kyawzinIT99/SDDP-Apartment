@@ -1,6 +1,6 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { encryptPassport } from "../../lib/guest-crypto";
-import { bangkokToday, occupiedRoomSet } from "../../lib/occupancy";
+import { bangkokToday, occupiedRoomSet, repairResidentRoomNumbers } from "../../lib/occupancy";
 import { setConfiguredRoomAvailability } from "../../lib/room-availability";
 import { normalizeRoomNumber } from "../../lib/rooms";
 import { bindings, ensureSchema } from "../../lib/storage";
@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     const user = await getChatGPTUser();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
     const { DB } = bindings(); await ensureSchema(DB!);
+    await repairResidentRoomNumbers(DB!);
     const name = new URL(request.url).searchParams.get("name")?.trim() ?? "";
     const rows = name
       ? await DB!.prepare("SELECT id, full_name AS fullName, phone, email, nationality, resident_type AS residentType, passport_last4 AS passportLast4, room_number AS roomNumber, check_in_date AS checkInDate, check_out_date AS checkOutDate, status, consent_recorded_at AS consentRecordedAt, created_at AS createdAt FROM residents WHERE LOWER(full_name) LIKE ? OR room_number LIKE ? ORDER BY created_at DESC LIMIT 200").bind(`%${name.toLowerCase()}%`, `%${name}%`).all()

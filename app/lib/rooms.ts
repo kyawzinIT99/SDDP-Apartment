@@ -44,6 +44,15 @@ export function normalizeRoomNumber(value: string): string {
   return compact.slice(0, 20);
 }
 
+export function catalogRoomFromValue(...values: string[]) {
+  const catalog = new Set(roomCatalog.map((room) => room.roomNumber));
+  for (const value of values) {
+    const roomNumber = normalizeRoomNumber(String(value || ""));
+    if (catalog.has(roomNumber)) return roomNumber;
+  }
+  return "";
+}
+
 export function inferFloor(roomNumber: string): string {
   if (/^[1234]\d{2}$/.test(roomNumber)) return roomNumber[0];
   if (/^VIP[123]$/.test(roomNumber)) return "4";
