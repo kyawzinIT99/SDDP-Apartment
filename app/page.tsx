@@ -40,6 +40,7 @@ const words = {
     name: "Your name", contact: "Phone / Line", email: "Email address", stay: "Stay type", room: "Preferred room", chooseRoom: "Choose an available room", noRooms: "No rooms are currently available", arrival: "Expected arrival", note: "Anything we should know?", send: "Send inquiry", sent: "We'll contact you soon — thank you for your inquiry!", roomChanged: "is now occupied. We switched your selection to", chooseAnother: "is now occupied. Please choose another available room.", occupiedPick: "This room is occupied. Choose an available room to send an inquiry.", needAvailable: "Please select an available room before sending your inquiry.", tapAvailable: "Tap an available room to continue",
     locationTitle: "Close to Chiang Mai. Easy to settle in.", directions: "Open in Google Maps", contactUs: "Contact SDDP",
     amenitiesLabel: "Amenities", galleryLabel: "Gallery", inquiryLabel: "Inquiry", locationLabel: "Location", viewFacebook: "View Facebook", showAll: "View all photos", showLess: "Show less", flexible: "Flexible living", monthlyOption: "Monthly", dailyOption: "Daily", footerLine: "Daily & monthly rooms · Chiang Mai", sending: "Sending…", formError: "Something went wrong — please try again or contact us directly.", adminLabel: "Admin",
+    scanLine: "Scan to chat on Line", lineOpen: "Open Line chat",
     packagesLabel: "Stay options", packagesTitle: "Daily or monthly. Same clean rooms.", packagesSub: "Prices are in Thai baht. The team confirms the room before you travel.", dailyStay: "Daily stay", monthlyStay: "Monthly stay", deposit: "Deposit", offer: "Current offer", chatLine: "Chat on Line", whoLabel: "Who stays here", whoTitle: "A simple base near Chiang Mai.", whoOneTitle: "Work and study", whoOne: "Quiet monthly rooms in San Kamphaeng, without city-centre prices.", whoTwoTitle: "Short visits", whoTwo: "Daily rooms when you need a clean stay without a long contract.", whoThreeTitle: "Easy arrival", whoThree: "TM30 support, Wi-Fi, parking and keycard access are ready when you check in.",
   },
   th: {
@@ -72,6 +73,7 @@ const words = {
     name: "ชื่อของคุณ", contact: "โทรศัพท์ / Line", email: "อีเมล", stay: "ประเภทการเข้าพัก", room: "ห้องที่ต้องการ", chooseRoom: "เลือกห้องว่าง", noRooms: "ขณะนี้ไม่มีห้องว่าง", arrival: "วันที่คาดว่าจะเข้าพัก", note: "รายละเอียดเพิ่มเติม", send: "ส่งคำถาม", sent: "เราจะติดต่อกลับเร็ว ๆ นี้ — ขอบคุณสำหรับการสอบถาม!", roomChanged: "มีผู้เข้าพักแล้ว เราเปลี่ยนห้องที่เลือกเป็น", chooseAnother: "มีผู้เข้าพักแล้ว กรุณาเลือกห้องว่างอื่น", occupiedPick: "ห้องนี้มีผู้เข้าพักแล้ว กรุณาเลือกห้องว่างเพื่อส่งคำถาม", needAvailable: "กรุณาเลือกห้องว่างก่อนส่งคำถาม", tapAvailable: "แตะห้องว่างเพื่อดำเนินการต่อ",
     locationTitle: "ใกล้เมืองเชียงใหม่ เริ่มต้นการเข้าพักได้ง่าย", directions: "เปิดใน Google Maps", contactUs: "ติดต่อ SDDP",
     amenitiesLabel: "สิ่งอำนวยความสะดวก", galleryLabel: "แกลเลอรี", inquiryLabel: "สอบถามห้องพัก", locationLabel: "ที่ตั้ง", viewFacebook: "ดู Facebook", showAll: "ดูรูปทั้งหมด", showLess: "แสดงน้อยลง", flexible: "พักได้อย่างยืดหยุ่น", monthlyOption: "รายเดือน", dailyOption: "รายวัน", footerLine: "ห้องพักรายวันและรายเดือน · เชียงใหม่", sending: "กำลังส่ง…", formError: "เกิดข้อผิดพลาด — กรุณาลองใหม่หรือติดต่อเราโดยตรง", adminLabel: "ผู้ดูแล",
+    scanLine: "สแกนเพื่อคุยทาง Line", lineOpen: "เปิดแชท Line",
     packagesLabel: "ตัวเลือกการเข้าพัก", packagesTitle: "พักรายวันหรือรายเดือน ห้องสะอาดเหมือนกัน", packagesSub: "ราคาเป็นบาท ทีมงานจะยืนยันห้องก่อนคุณเดินทาง", dailyStay: "พักรายวัน", monthlyStay: "พักรายเดือน", deposit: "เงินมัดจำ", offer: "โปรโมชันปัจจุบัน", chatLine: "คุยทาง Line", whoLabel: "เหมาะกับใคร", whoTitle: "ฐานที่พักใกล้เชียงใหม่ ที่เริ่มต้นได้ง่าย", whoOneTitle: "ทำงานและเรียน", whoOne: "ห้องรายเดือนเงียบในสันกำแพง ไม่ต้องจ่ายราคาใจกลางเมือง", whoTwoTitle: "เข้าพักระยะสั้น", whoTwo: "ห้องรายวันเมื่อต้องการที่พักสะอาดโดยไม่ต้องทำสัญญายาว", whoThreeTitle: "เดินทางมาถึงได้ง่าย", whoThree: "มีบริการ TM30, Wi-Fi, ที่จอดรถ และคีย์การ์ดพร้อมเมื่อเช็คอิน",
   },
   my: {
@@ -104,6 +106,7 @@ const words = {
     name: "သင့်အမည်", contact: "ဖုန်း / Line", email: "အီးမေးလ်", stay: "တည်းခိုမှုအမျိုးအစား", room: "နှစ်သက်ရာအခန်း", chooseRoom: "လွတ်နေသောအခန်း ရွေးပါ", noRooms: "လက်ရှိ အခန်းလွတ်မရှိပါ", arrival: "ရောက်ရှိမည့်ရက်", note: "ထပ်မံသိရှိရန်", send: "မေးမြန်းချက် ပို့ရန်", sent: "မကြာမီ ဆက်သွယ်ပေးပါမည် — မေးမြန်းမှုအတွက် ကျေးဇူးတင်ပါသည်!", roomChanged: "တွင် နေထိုင်သူရှိသွားပါပြီ။ သင့်ရွေးချယ်မှုကို ပြောင်းပေးထားသည်", chooseAnother: "တွင် နေထိုင်သူရှိသွားပါပြီ။ အခြားအခန်းလွတ်ကို ရွေးပါ။", occupiedPick: "ဤအခန်းတွင် နေထိုင်သူရှိပြီး မေးမြန်း၍မရပါ။ အခန်းလွတ်ကို ရွေးပါ။", needAvailable: "မေးမြန်းချက် မပို့မီ အခန်းလွတ်ကို ရွေးပါ။", tapAvailable: "ဆက်လုပ်ရန် အခန်းလွတ်ကို နှိပ်ပါ",
     locationTitle: "ချင်းမိုင်မြို့အနီး အလွယ်တကူ နေထိုင်နိုင်ပါသည်။", directions: "Google Maps တွင်ဖွင့်ရန်", contactUs: "SDDP ကို ဆက်သွယ်ရန်",
     amenitiesLabel: "ဝန်ဆောင်မှုများ", galleryLabel: "ဓာတ်ပုံများ", inquiryLabel: "မေးမြန်းရန်", locationLabel: "တည်နေရာ", viewFacebook: "Facebook တွင်ကြည့်ရန်", showAll: "ဓာတ်ပုံအားလုံးကြည့်ရန်", showLess: "လျှော့ပြရန်", flexible: "လိုက်လျောညီထွေ တည်းခိုမှု", monthlyOption: "လစဉ်", dailyOption: "နေ့စဉ်", footerLine: "နေ့စဉ်နှင့် လစဉ်အခန်းများ · ချင်းမိုင်", sending: "ပို့နေသည်…", formError: "အမှားတစ်ခုဖြစ်သွားသည် — ထပ်ကြိုးစားပါ သို့မဟုတ် တိုက်ရိုက်ဆက်သွယ်ပါ", adminLabel: "စီမံခန့်ခွဲမှု",
+    scanLine: "Line တွင် စကားပြောရန် စကင်ဖတ်ပါ", lineOpen: "Line ချတ် ဖွင့်ရန်",
     packagesLabel: "တည်းခိုမှု ရွေးချယ်စရာ", packagesTitle: "နေ့စဉ် သို့မဟုတ် လစဉ်။ အခန်းသန့်ရှင်းမှု အတူတူပါ။", packagesSub: "ဈေးနှုန်းမှာ ထိုင်းဘတ်ဖြစ်သည်။ ခရီးမထွက်မီ အဖွဲ့က အခန်းကို အတည်ပြုပေးပါမည်။", dailyStay: "နေ့စဉ် တည်းခိုမှု", monthlyStay: "လစဉ် တည်းခိုမှု", deposit: "အာမခံငွေ", offer: "လက်ရှိ ကမ်းလှမ်းချက်", chatLine: "Line မှ စကားပြောရန်", whoLabel: "မည်သူများ တည်းခိုသနည်း", whoTitle: "ချင်းမိုင်အနီး အဆင်ပြေသော နေရာ။", whoOneTitle: "အလုပ်နှင့် ပညာသင်", whoOne: "San Kamphaeng တွင် တိတ်ဆိတ်ပြီး ဈေးသက်သာသော လစဉ်အခန်းများ။", whoTwoTitle: "ခဏတာ လာရောက်မှု", whoTwo: "စာချုပ်ရှည်မလိုဘဲ သန့်ရှင်းစွာ တည်းခိုလိုသော နေ့စဉ်အခန်းများ။", whoThreeTitle: "ရောက်ရှိရ လွယ်ကူမှု", whoThree: "TM30 အကူအညီ၊ Wi-Fi၊ ပါကင်နှင့် ကီးကတ် ဝင်ပေါက်များ အဆင်သင့်ရှိသည်။",
   },
 } satisfies Record<Language, Record<string, string | string[]>>;
@@ -291,7 +294,20 @@ export default function Home() {
       </section>
 
       <section className="inquiry-section" id="inquiry">
-        <div className="inquiry-copy"><span>06 / {t.inquiryLabel}</span><h2>{t.inquiryTitle}</h2><p>{t.inquirySub}</p><div className="direct-contact"><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a></div></div>
+        <div className="inquiry-copy">
+          <span>06 / {t.inquiryLabel}</span>
+          <h2>{t.inquiryTitle}</h2>
+          <p>{t.inquirySub}</p>
+          <div className="direct-contact">
+            <a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a>
+            <a href={lineHref} target="_blank" rel="noreferrer">{t.lineOpen} · @{lineId}</a>
+          </div>
+          <a className="line-qr-card" href={lineHref} target="_blank" rel="noreferrer">
+            <img src="/line-qr.jpg" alt={t.scanLine} width={180} height={180} />
+            <span>{t.scanLine}</span>
+            <small>@{lineId}</small>
+          </a>
+        </div>
         <form onSubmit={submitInquiry}>
           <label>{t.name}<input name="name" required autoComplete="name" /></label>
           <label>{t.contact}<input name="phone" required autoComplete="tel" /></label>
@@ -305,7 +321,7 @@ export default function Home() {
       </section>
 
       <section className="location-section" id="location"><div><span>07 / {t.locationLabel}</span><h2>{t.locationTitle}</h2><p>{settings.address}</p><a href={settings.mapUrl} target="_blank" rel="noreferrer">{t.directions} ↗</a></div><div className="map-frame"><iframe src={settings.mapEmbedUrl} title="SDDP Apartment on Google Maps" loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div></section>
-      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a><a href={careChannelUrl} target="_blank" rel="noreferrer">{t.medical}</a></div></footer>
+      <footer><a className="brand" href="#top"><img src="/brand-logo.jpg" alt="" /><span><b>SDDP</b><small>APARTMENT</small></span></a><p>{t.footerLine}</p><div><a href={`tel:${settings.phonePrimary.replace(/-/g, "")}`}>{settings.phonePrimary}</a><a href={lineHref} target="_blank" rel="noreferrer">Line</a><a href={settings.facebookUrl} target="_blank" rel="noreferrer">Facebook</a><a href={careChannelUrl} target="_blank" rel="noreferrer">{t.medical}</a></div></footer>
       <div className="chat-widget-wrap">
         <ChatWidget lang={language} lineId={lineId} />
       </div>

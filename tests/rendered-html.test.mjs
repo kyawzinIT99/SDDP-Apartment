@@ -43,6 +43,8 @@ test("keeps the public facts and automation endpoints in source", async () => {
   assert.match(defaults, /SDDP\.Apartment/);
   assert.match(page, /publicGallery/);
   assert.match(page, /Chat on Line/);
+  assert.match(page, /line-qr\.jpg/);
+  assert.match(page, /line-qr-card/);
   assert.doesNotMatch(page, /className="line-official/);
   assert.doesNotMatch(page, /Chat on WhatsApp|wa\.me|wa-float/);
   assert.match(page, /Stay options/);
